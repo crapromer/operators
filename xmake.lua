@@ -116,6 +116,7 @@ target("operators")
     end
     set_languages("cxx17")
     add_files("src/ops/*/operator.cc")
+    add_files("src/tensor/*.cc")
 target_end()
 
 target("main")
