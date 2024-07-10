@@ -6,6 +6,6 @@ typedef struct BatchNormCpuDescriptor {
     Device device;
 } BatchNormCpuDescriptor;
 
-void batch_norm_cpu_f16(Tensor c, Tensor beta, Tensor a, float alpha);
+void batch_norm_cpu_f16(Tensor y, Tensor x, float epsilon);
 
 #endif// __CPU_BATCH_NORM_H__

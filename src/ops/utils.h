@@ -3,6 +3,9 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <memory>
+#include <cuda.h>
+#include <cudnn.h>
 
 /* This file contains some useful macros and helper functions */
 
@@ -23,4 +26,28 @@ inline void assert_true(int expr, const char *msg, const char *file, int line) {
     exit(EXIT_FAILURE)
 
 #define ROUND_UP_DIV(x, y) ((x + y - 1) / y)
+
+template<typename T = void>
+inline std::shared_ptr<T> allocate(std::size_t size) {
+  T *ptr;
+  cudaMalloc(&ptr, size);
+  return std::shared_ptr<T>(ptr, [](T *ptr) { cudaFree(ptr); });
+}
+
+#define CUDA_CALL(f) { \
+  ::cudaError_t err = (f); \
+  if (err != cudaSuccess) { \
+    std::cout << #f ": " << err << std::endl; \
+    std::exit(1); \
+  } \
+}
+
+#define CUDNN_CALL(f) { \
+  ::cudnnStatus_t err = (f); \
+  if (err != CUDNN_STATUS_SUCCESS) { \
+    std::cout << #f ": " << err << std::endl; \
+    std::exit(1); \
+  } \
+}
+
 #endif// __UTILS_H__

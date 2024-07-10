@@ -3,6 +3,6 @@
 #include "../../utils.h"
 #include <cmath>
 
-void batch_norm_cpu_f16(Tensor c, Tensor beta, Tensor a, float alpha){
+void batch_norm_cpu_f16(Tensor y, Tensor x, float epsilon){
 
 }

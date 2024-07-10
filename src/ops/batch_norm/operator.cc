@@ -16,17 +16,17 @@ __C void destroyBatchNormDescriptor(void *descriptor) {
     delete (BatchNormDescriptor *) descriptor;
 }
 
-__C void batchNorm(void *descriptor, Tensor y, Tensor x, Tensor w, float epsilon, void *stream) {
+__C void batchNorm(void *descriptor, Tensor y, Tensor x, float epsilon, void *stream) {
     auto desc = (BatchNormDescriptor *) descriptor;
     switch (desc->device) {
 #ifdef ENABLE_CPU
         case DevCpu:
-            batch_norm_cpu_f16(y, x, w, epsilon);
+            batch_norm_cpu_f16(y, x, epsilon);
             break;
 #endif
 #ifdef ENABLE_NV_GPU
         case DevNvGpu:
-            batch_norm_nv_gpu_f16(y, x, w, epsilon, stream);
+            batch_norm_nv_gpu_f16(y, x, epsilon, stream);
             break;
 #endif
         default:
