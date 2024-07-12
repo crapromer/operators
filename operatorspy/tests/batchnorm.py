@@ -17,13 +17,13 @@ import torch
 def batchNorm(a,eps,mean,var):
     input_dtype = a.dtype
     return (
-        torch.nn.functional.batch_norm(a.to(torch.float32),running_mean=mean,running_var=var)
+        torch.nn.functional.batch_norm(a.to(torch.float16),running_mean=mean,running_var=var)
     )
 
 
 def test(lib, descriptor, torch_device):
     a = torch.rand((1, 3, 5,5), dtype=torch.float16).to(torch_device)
-    b = torch.rand((1, 3, 5,5), dtype=torch.float16).to(torch_device)
+    b = torch.ones((1, 3, 5,5), dtype=torch.float16).to(torch_device)
     mean = torch.zeros((3), dtype=torch.float16).to(torch_device)
     var = torch.ones((3), dtype=torch.float16).to(torch_device)
     beta = 0.0
@@ -38,6 +38,7 @@ def test(lib, descriptor, torch_device):
         c_float(eps),
         None,None,None
     )
+    print(a,'\n',b)
     assert torch.allclose(b, ans, atol=0, rtol=1e-3)
     print("Test passed!")
 
