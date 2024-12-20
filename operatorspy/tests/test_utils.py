@@ -22,5 +22,10 @@ def get_args():
         action="store_true",
         help="Run ASCEND NPU test",
     )
+    parser.add_argument(
+        "--teco",
+        action="store_true",
+        help="Run TECO SDAA test",
+    )
 
     return parser.parse_args()

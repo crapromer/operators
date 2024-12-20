@@ -43,6 +43,7 @@ def open_lib():
         paths = ld_library_path.split(os.pathsep)
         for path in paths:
             full_path = os.path.join(path, library_name)
+            print(full_path)
             if os.path.isfile(full_path):
                 return full_path
         return None
@@ -53,7 +54,6 @@ def open_lib():
         library_path = find_library_in_ld_path("operators.dll")
     elif system_name == "Linux":
         library_path = find_library_in_ld_path("liboperators.so")
-
     assert (
         library_path is not None
     ), f"Cannot find operators.dll or liboperators.so. Check if {LIB_OPERATORS_DIR} is set correctly."

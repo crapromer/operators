@@ -30,6 +30,14 @@ option("ascend-npu")
     add_defines("ENABLE_ASCEND_NPU")
 option_end()
 
+option("teco")
+    set_default(false)
+    set_showmenu(true)
+    set_description("Enable or disable Teco kernel")
+    add_defines("ENABLE_TECO_SDAA")
+option_end()
+
+
 if is_mode("debug") then
     add_cxflags("-g -O0")
     add_defines("DEBUG_MODE")
@@ -115,7 +123,7 @@ if has_config("cambricon-mlu") then
             table.insert(target:objectfiles(), objectfile)
         end)
 
-rule_end()
+    rule_end()
 
 
     target("cambricon-mlu")
@@ -156,6 +164,53 @@ if has_config("ascend-npu") then
     target_end()
 end
 
+
+
+if has_config("teco") then
+
+    add_defines("ENABLE_TECO_SDAA")
+    add_includedirs("/opt/tecoai/include")
+    add_linkdirs("/opt/tecoai/lib64")
+    add_links("libsdaart.so")
+    add_links("libtecoblas.so")
+
+    rule("scpp")
+        set_extensions(".scpp")
+
+        on_load(function (target)
+            target:add("includedirs", "include")
+        end)
+
+        on_build_file(function (target, sourcefile)
+            local objectfile = target:objectfile(sourcefile)
+            os.mkdir(path.directory(objectfile))
+
+            local cc = "/opt/tecoai/bin/tecocc"
+
+            local includedirs = table.concat(target:get("includedirs"), " ")
+            local args = {sourcefile, "-o", objectfile}
+            
+            for _, includedir in ipairs(target:get("includedirs")) do
+                table.insert(args, "-I" .. includedir)
+            end
+
+            os.execv(cc, args)
+            table.insert(target:objectfiles(), objectfile)
+        end)
+
+    rule_end()
+
+
+    target("teco")
+        set_kind("static")
+        set_languages("cxx17")
+        add_files("src/devices/teco/*.cc", "src/ops/*/teco/*.cc")
+        add_files("src/ops/*/teco/*.scpp", {rule = "scpp"})
+        add_cxflags("-lstdc++ -Wall -Werror -fPIC")
+    target_end()
+
+end
+
 target("operators")
     set_kind("shared")
 
@@ -170,6 +225,9 @@ target("operators")
     end
     if has_config("ascend-npu") then
         add_deps("ascend-npu")
+    end
+    if has_config("teco") then
+        add_deps("teco")
     end
     set_languages("cxx17")
     add_files("src/devices/handle.cc")

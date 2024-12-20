@@ -4,6 +4,7 @@
 #include "data_type.h"
 #include "tensor.h"
 #include <algorithm>
+#include <functional>
 #include <numeric>
 #include <stdio.h>
 #include <stdlib.h>

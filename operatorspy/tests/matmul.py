@@ -59,13 +59,15 @@ def test(
     b = torch.rand(b_shape, dtype=dtype).to(torch_device)
     c = torch.zeros(c_shape, dtype=dtype).to(torch_device)
 
+
     if a_stride is not None:
         a = rearrange_tensor(a, a_stride)
     if b_stride is not None:
+        print(b)
         b = rearrange_tensor(b, b_stride)
+        print(b)
     if c_stride is not None:
         c = rearrange_tensor(c, c_stride)
-
     ans = matmul(c, beta, a, b, alpha)
     
     a_tensor = to_tensor(a, lib)
@@ -101,7 +103,6 @@ def test(
             None,
         )
     )
-
     assert torch.allclose(c, ans, atol=0, rtol=1e-2)
 
     check_error(lib.infiniopDestroyMatmulDescriptor(descriptor))
@@ -240,6 +241,40 @@ def test_ascend(lib, test_cases):
 
     destroy_handle(lib, handle)
 
+def test_sdaa(lib, test_cases):
+    import torch_sdaa
+
+    device = DeviceEnum.DEVICE_TECO
+    handle = create_handle(lib, device)
+
+    for (
+        alpha,
+        beta,
+        a_shape,
+        b_shape,
+        c_shape,
+        a_stride,
+        b_stride,
+        c_stride,
+        dtype,
+    ) in test_cases:
+        test(
+            lib,
+            handle,
+            "sdaa",
+            alpha,
+            beta,
+            a_shape,
+            b_shape,
+            c_shape,
+            a_stride,
+            b_stride,
+            c_stride,
+            dtype,
+        )
+
+    destroy_handle(lib, handle)
+
 if __name__ == "__main__":
     test_cases = [
         # alpha, beta, a_shape, b_shape, c_shape, a_stride, b_stride, c_stride, dtype
@@ -313,4 +348,6 @@ if __name__ == "__main__":
         test_ascend(lib, test_cases)
     if not (args.cpu or args.cuda or args.bang or args.ascend):
         test_cpu(lib, test_cases)
+    if args.teco:
+        test_sdaa(lib,test_cases)
     print("Test passed!")
