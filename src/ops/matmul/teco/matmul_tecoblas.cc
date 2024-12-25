@@ -1,6 +1,7 @@
 #include "matmul_tecoblas.h"
 
 infiniopStatus_t tecoCreateMatmulDescriptor(TecoHandle_t handle, MatmulTecoDescriptor_t *desc_ptr, infiniopTensorDescriptor_t c_desc, float alpha, infiniopTensorDescriptor_t a_desc, infiniopTensorDescriptor_t b_desc, float beta) {
+    //TODO:添加维度判断是否为batch
     *desc_ptr = new MatmulTecoDescriptor{handle->device};
     (*desc_ptr)->handle = handle->handle;
     (*desc_ptr)->device = handle->device;
