@@ -63,9 +63,7 @@ def test(
     if a_stride is not None:
         a = rearrange_tensor(a, a_stride)
     if b_stride is not None:
-        print(b)
         b = rearrange_tensor(b, b_stride)
-        print(b)
     if c_stride is not None:
         c = rearrange_tensor(c, c_stride)
     ans = matmul(c, beta, a, b, alpha)

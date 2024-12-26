@@ -13,6 +13,8 @@ struct MatmulTecoDescriptor {
     int m,n,k;
     float alpha,beta;
     int lda,ldb,ldc;
+    int batch;
+    long long int strideA,strideB,strideC;
 };
 
 typedef struct MatmulTecoDescriptor *MatmulTecoDescriptor_t;

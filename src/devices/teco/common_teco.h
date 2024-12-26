@@ -6,6 +6,7 @@
 #include <sdaa_runtime.h>
 #include <tecoblas.h>
 #include "device.h"
+#include <iostream>
 #define CHECK_TECOBLAS(expression)                                                               \
     {                                                                                            \
         tecoblasStatus_t status = (expression);                                                  \
@@ -14,6 +15,6 @@
             exit(EXIT_FAILURE);                                                                  \
         }                                                                                        \
     }
-
+void** convertToBatch(void* data, int batch, int m, int n, size_t typeSize);
 
 #endif
