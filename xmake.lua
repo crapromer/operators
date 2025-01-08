@@ -150,10 +150,6 @@ if has_config("cambricon-mlu") then
         end)
 
     rule_end()
-<<<<<<< HEAD
-
-=======
->>>>>>> upstream/dev
 
     target("cambricon-mlu")
         set_kind("static")
@@ -223,8 +219,6 @@ if has_config("ascend-npu") then
 
     target_end()
 end
-
-
 
 if has_config("teco") then
 
