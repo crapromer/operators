@@ -44,24 +44,54 @@ uint16_t f32_to_f16(float val) {
     int32_t exponent = ((f32 >> 23) & 0xFF) - 127;// Extract and de-bias the exponent
     uint32_t mantissa = f32 & 0x7FFFFF;           // Extract the mantissa (fraction part)
 
-    if (exponent == 128) {// Special case for Inf and NaN
-        if (mantissa != 0) {
-            // NaN
-            return sign | 0x7C00 | (mantissa >> 13);// Convert the NaN payload
-        } else {
-            // Infinity
-            return sign | 0x7C00;
+    if (exponent >= 31) {// Special cases for Inf and NaN
+        // NaN
+        if (exponent == 128 && mantissa != 0) {
+            return sign | 0x7E00;
         }
-    } else if (exponent > 15) {  // Overflow: Larger than float16 max
-        return sign | 0x7C00;    // Return infinity
-    } else if (exponent >= -14) {// Normalized float16
+        // Infinity
+        return sign | 0x7C00;
+    } else if (exponent >= -14) {// Normalized case
         return sign | ((exponent + 15) << 10) | (mantissa >> 13);
-    } else if (exponent >= -24) {     // Subnormal float16 (leading denormals)
-        mantissa |= 0x800000;         // Add implicit leading 1
-        int32_t shift = -exponent - 1;// Calculate shift for subnormal numbers
-        return sign | (mantissa >> (13 + shift));
+    } else if (exponent >= -24) {
+        mantissa |= 0x800000;// Add implicit leading 1
+        mantissa >>= (-14 - exponent);
+        return sign | (mantissa >> 13);
     } else {
         // Too small for subnormal: return signed zero
         return sign;
+    }
+}
+
+uint64_t getDstOffset(uint64_t flat_index, uint64_t ndim, int64_t const *src_strides, int64_t const *dst_strides) {
+    uint64_t res = 0;
+    for (uint64_t i = 0; i < ndim; ++i) {
+        res += flat_index / src_strides[i] * dst_strides[i];
+        flat_index %= src_strides[i];
+    }
+    return res;
+}
+
+uint64_t getOffset(uint64_t flat_index, uint64_t ndim, uint64_t const *shape, int64_t const *strides) {
+    uint64_t res = 0;
+    for (long i = ndim - 1; i >= 0; --i) {
+        res += (flat_index % shape[i]) * strides[i];
+        flat_index /= shape[i];
+    }
+    return res;
+}
+
+uint64_t getPaddedSize(uint64_t ndim, uint64_t *shape, uint64_t const *pads) {
+    uint64_t total_size = 1;
+    for (size_t i = 0; i < ndim; ++i) {
+        total_size *= shape[i] + (i < 2 ? 0 : 2 * pads[i - 2]);
+    }
+    return total_size;
+}
+
+void getPaddedShape(uint64_t ndim, uint64_t const *shape, uint64_t const *pads, uint64_t *padded_shape) {
+    memcpy(padded_shape, shape, ndim * sizeof(uint64_t));
+    for (size_t i = 2; i < ndim; ++i) {
+        padded_shape[i] += 2 * pads[i - 2];
     }
 }

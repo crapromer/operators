@@ -2,6 +2,7 @@ from ctypes import POINTER, Structure, c_int32, c_uint64, c_void_p, c_float
 import ctypes
 import sys
 import os
+import time
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 from operatorspy import (
@@ -21,6 +22,13 @@ from operatorspy import (
 from operatorspy.tests.test_utils import get_args
 import torch
 
+# constant for control whether profile the pytorch and lib functions
+# NOTE: need to manually add synchronization function to the lib function,
+#       e.g., cudaDeviceSynchronize() for CUDA
+PROFILE = False
+NUM_PRERUN = 10
+NUM_ITERATIONS = 1000
+
 
 class MatmulDescriptor(Structure):
     _fields_ = [("device", c_int32)]
@@ -28,12 +36,20 @@ class MatmulDescriptor(Structure):
 
 infiniopMatmulDescriptor_t = POINTER(MatmulDescriptor)
 
-def matmul(c, beta, a, b, alpha):
+def matmul(_c, beta, _a, _b, alpha):
+    a = _a.clone()
+    b = _b.clone()
+    c = _c.clone()
     input_dtype = c.dtype
-    return (
+    ans = (
         alpha * torch.matmul(a.to(torch.float32), b.to(torch.float32)).to(input_dtype)
         + beta * c
     )
+    if PROFILE:
+        if _c.device.type == "cuda":
+            torch.cuda.synchronize()
+        # TODO: add synchronization function for other devices
+    return ans
 
 
 def test(
@@ -57,7 +73,9 @@ def test(
 
     a = torch.rand(a_shape, dtype=dtype).to(torch_device)
     b = torch.rand(b_shape, dtype=dtype).to(torch_device)
-    c = torch.zeros(c_shape, dtype=dtype).to(torch_device)
+    c = torch.ones(c_shape, dtype=dtype).to(torch_device)
+
+    ans = matmul(c, beta, a, b, alpha)
 
 
     if a_stride is not None:
@@ -66,8 +84,12 @@ def test(
         b = rearrange_tensor(b, b_stride)
     if c_stride is not None:
         c = rearrange_tensor(c, c_stride)
+<<<<<<< HEAD
     ans = matmul(c, beta, a, b, alpha)
     
+=======
+
+>>>>>>> upstream/dev
     a_tensor = to_tensor(a, lib)
     b_tensor = to_tensor(b, lib)
     c_tensor = to_tensor(c, lib)
@@ -102,6 +124,42 @@ def test(
         )
     )
     assert torch.allclose(c, ans, atol=0, rtol=1e-2)
+
+    if PROFILE:
+        for i in range(NUM_PRERUN):
+            _ = matmul(c, beta, a, b, alpha)
+        start_time = time.time()
+        for i in range(NUM_ITERATIONS):
+            _ = matmul(c, beta, a, b, alpha)
+        elapsed = (time.time() - start_time) / NUM_ITERATIONS
+        print(f"pytorch time: {elapsed :6f}")
+        for i in range(NUM_PRERUN):
+            check_error(
+                lib.infiniopMatmul(
+                    descriptor,
+                    workspace.data_ptr() if workspace is not None else None,
+                    workspace_size.value,
+                    c_tensor.data,
+                    a_tensor.data,
+                    b_tensor.data,
+                    None,
+                )
+            )
+        start_time = time.time()
+        for i in range(NUM_ITERATIONS):
+            check_error(
+                lib.infiniopMatmul(
+                    descriptor,
+                    workspace.data_ptr() if workspace is not None else None,
+                    workspace_size.value,
+                    c_tensor.data,
+                    a_tensor.data,
+                    b_tensor.data,
+                    None,
+                )
+            )
+        elapsed = (time.time() - start_time) / NUM_ITERATIONS
+        print(f"    lib time: {elapsed :6f}")
 
     check_error(lib.infiniopDestroyMatmulDescriptor(descriptor))
 
@@ -277,28 +335,15 @@ if __name__ == "__main__":
     test_cases = [
         # alpha, beta, a_shape, b_shape, c_shape, a_stride, b_stride, c_stride, dtype
         (1.0, 0.0, (1, 2048), (2048, 2048), (1, 2048), None, None, None, torch.float16),
-        (
-            1.0,
-            0.0,
-            (1, 2048),
-            (2048, 2048),
-            (1, 2048),
-            (4096, 1),
-            (4096, 1),
-            (4096, 1),
-            torch.float16,
-        ),
-        (
-            1.0,
-            0.0,
-            (2, 1, 2048),
-            (2, 2048, 2048),
-            (2, 1, 2048),
-            None,
-            None,
-            None,
-            torch.float16,
-        ),
+        (1.0, 0.0, (1, 2048), (2048, 2048), (1, 2048), None, None, None, torch.float32),
+        (1.0, 0.0, (2, 4, 2048), (2, 2048, 2048), (2, 4, 2048), None, None, None, torch.float16),
+        (1.0, 0.0, (2, 4, 2048), (2, 2048, 2048), (2, 4, 2048), None, None, None, torch.float32),
+        (1.0, 0.0, (1, 2048), (2048, 2048), (1, 2048), (4096, 1), (4096, 1), (4096, 1), torch.float16),
+        (1.0, 0.0, (1, 2048), (2048, 2048), (1, 2048), (4096, 1), (4096, 1), (4096, 1), torch.float32),
+        (1.0, 1.0, (6, 2048), (2048, 2560), (6, 2560), (2048, 1), (1, 2048), (2560, 1), torch.float16),
+        (1.0, 1.0, (6, 2048), (2048, 2560), (6, 2560), (2048, 1), (1, 2048), (2560, 1), torch.float32),
+        (1.0 / 8.0, 0.0, (4, 8 * 6, 64), (4, 64, 6), (4, 8 * 6, 6), None, None, None, torch.float16),
+        (1.0 / 8.0, 0.0, (4, 8 * 6, 64), (4, 64, 6), (4, 8 * 6, 6), None, None, None, torch.float32),
     ]
     args = get_args()
     lib = open_lib()
@@ -346,6 +391,10 @@ if __name__ == "__main__":
         test_ascend(lib, test_cases)
     if not (args.cpu or args.cuda or args.bang or args.ascend):
         test_cpu(lib, test_cases)
+<<<<<<< HEAD
     if args.teco:
         test_sdaa(lib,test_cases)
     print("Test passed!")
+=======
+    print("\033[92mTest passed!\033[0m")
+>>>>>>> upstream/dev

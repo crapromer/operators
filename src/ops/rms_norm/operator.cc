@@ -13,7 +13,9 @@
 #ifdef ENABLE_CAMBRICON_MLU
 #include "../../devices/bang/bang_handle.h"
 #include "bang/rms_norm_bang.h"
-#include "bang/rms_norm_cnnl.h"
+#endif
+#ifdef ENABLE_ASCEND_NPU
+#include "ascend/rms_norm_aclnn.h"
 #endif
 #ifdef ENABLE_TECO_SDAA
 #include "teco/rms_norm_teco.h"
@@ -39,7 +41,17 @@ __C infiniopStatus_t infiniopCreateRMSNormDescriptor(
 #endif
 #ifdef ENABLE_CAMBRICON_MLU
         case DevCambriconMlu: {
-            //return bangCreateRMSNormDescriptor((BangHandle_t) handle, (RMSNormBangDescriptor_t *) desc_ptr, y_desc);
+            return bangCreateRMSNormDescriptor((BangHandle_t) handle, (RMSNormBangDescriptor_t *) desc_ptr, y_desc, x_desc, w_desc, epsilon);
+        }
+#endif
+#ifdef ENABLE_ASCEND_NPU
+        case DevAscendNpu: {
+            return aclnnCreateRMSNormDescriptor((AscendHandle_t) handle,
+                                                (RMSNormAclnnDescriptor_t *) desc_ptr,
+                                                y_desc,
+                                                x_desc,
+                                                w_desc,
+                                                epsilon);
         }
 #endif
 #ifdef ENABLE_TECO_SDAA
@@ -65,20 +77,29 @@ __C infiniopStatus_t infiniopGetRMSNormWorkspaceSize(infiniopRMSNormDescriptor_t
 #endif
 #ifdef ENABLE_CAMBRICON_MLU
         case DevCambriconMlu: {
-            //return bangGetRMSNormWorkspaceSize((RMSNormBangDescriptor_t) desc, size);
+            return bangGetRMSNormWorkspaceSize((RMSNormBangDescriptor_t) desc, size);
         }
+#endif
+#ifdef ENABLE_ASCEND_NPU
+        case DevAscendNpu: {
+            return aclnnGetRMSNormWorkspaceSize((RMSNormAclnnDescriptor_t) desc,
+                                                size);
+        }
+<<<<<<< HEAD
 #endif
 #ifdef ENABLE_TECO_SDAA
         case DevTecoSDAA: {
             return tecoGetRMSNormWorkspaceSize((RMSNormTecoDescriptor_t) desc, size);
         }
+=======
+>>>>>>> upstream/dev
 #endif
     }
     return STATUS_BAD_DEVICE;
 }
 
 __C infiniopStatus_t infiniopRMSNorm(infiniopRMSNormDescriptor_t desc, void *workspace, uint64_t workspace_size,
-                                     void *y, void *x, void *w, void *stream) {
+                                     void *y, void const *x, void const *w, void *stream) {
     switch (desc->device) {
 #ifdef ENABLE_CPU
         case DevCpu:
@@ -92,9 +113,19 @@ __C infiniopStatus_t infiniopRMSNorm(infiniopRMSNormDescriptor_t desc, void *wor
 #endif
 #ifdef ENABLE_CAMBRICON_MLU
         case DevCambriconMlu: {
-            //return bangRMSNorm((RMSNormBangDescriptor_t) desc, workspace, workspace_size, data, stream);
+            return bangRMSNorm((RMSNormBangDescriptor_t) desc, workspace, workspace_size, y, x, w, stream);
         }
-
+#endif
+#ifdef ENABLE_ASCEND_NPU
+        case DevAscendNpu: {
+            return aclnnRMSNorm((RMSNormAclnnDescriptor_t) desc,
+                                workspace,
+                                workspace_size,
+                                y,
+                                x,
+                                w,
+                                stream);
+        }
 #endif
 #ifdef ENABLE_TECO_SDAA
         case DevTecoSDAA: {
@@ -125,7 +156,12 @@ __C infiniopStatus_t infiniopDestroyRMSNormDescriptor(infiniopRMSNormDescriptor_
 #endif
 #ifdef ENABLE_CAMBRICON_MLU
         case DevCambriconMlu: {
-            //return bangDestroyRMSNormDescriptor((RMSNormBangDescriptor_t) desc);
+            return bangDestroyRMSNormDescriptor((RMSNormBangDescriptor_t) desc);
+        }
+#endif
+#ifdef ENABLE_ASCEND_NPU
+        case DevAscendNpu: {
+            return aclnnDestroyRMSNormDescriptor((RMSNormAclnnDescriptor_t) desc);
         }
 
 #endif

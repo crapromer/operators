@@ -13,9 +13,10 @@
 
 struct MatmulAclnnDescriptor {
     Device device;
-    AscendHandle_t handle;
+    int device_id;
     aclOpExecutor* executor;
     MatmulInfo* info;
+    DT dtype;
     aclnnTensorDescriptor_t cDesc, aDesc, bDesc;
     // cubeMathType
     // see doc: https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/80RC3alpha002/apiref/appdevgapi/context/aclnnBatchMatMul.md

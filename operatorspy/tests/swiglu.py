@@ -41,6 +41,7 @@ def test_out_of_place(
     b_stride=None,
     c_stride=None,
     dtype=torch.float16,
+    sync=None,
 ):
     print(
         f"Testing SwiGLU on {torch_device} with shape:{shape} a_stride:{a_stride} b_stride:{b_stride} c_stride:{c_stride} dtype:{dtype}"
@@ -48,7 +49,6 @@ def test_out_of_place(
     a = torch.rand(shape, dtype=dtype).to(torch_device)
     b = torch.rand(shape, dtype=dtype).to(torch_device)
     c = torch.rand(shape, dtype=dtype).to(torch_device)
-    ans = swiglu(a, b)
 
     if a_stride is not None:
         a = rearrange_tensor(a, a_stride)
@@ -56,6 +56,10 @@ def test_out_of_place(
         b = rearrange_tensor(b, b_stride)
     if c_stride is not None:
         c = rearrange_tensor(c, c_stride)
+    ans = swiglu(a, b)
+
+    if sync is not None:
+        sync()
 
     a_tensor = to_tensor(a, lib)
     b_tensor = to_tensor(b, lib)
@@ -70,8 +74,12 @@ def test_out_of_place(
             b_tensor.descriptor,
         )
     )
-    lib.infiniopSwiGLU(descriptor, c_tensor.data, a_tensor.data, b_tensor.data, None)
-    
+    check_error(
+        lib.infiniopSwiGLU(
+            descriptor, c_tensor.data, a_tensor.data, b_tensor.data, None
+        )
+    )
+
     assert torch.allclose(c, ans, atol=1e-4, rtol=1e-2)
     print("out-of-place Test passed!")
 
@@ -86,15 +94,19 @@ def test_in_place1(
     a_stride=None,
     b_stride=None,
     dtype=torch.float16,
+    sync=None,
 ):
     a = torch.rand(shape, dtype=dtype).to(torch_device)
     b = torch.rand(shape, dtype=dtype).to(torch_device)
-    ans = swiglu(a, b)
 
     if a_stride is not None:
         a = rearrange_tensor(a, a_stride)
     if b_stride is not None:
         b = rearrange_tensor(b, b_stride)
+    ans = swiglu(a, b)
+
+    if sync is not None:
+        sync()
 
     a_tensor = to_tensor(a, lib)
     b_tensor = to_tensor(b, lib)
@@ -108,9 +120,12 @@ def test_in_place1(
             b_tensor.descriptor,
         )
     )
-    lib.infiniopSwiGLU(descriptor, a_tensor.data, a_tensor.data, b_tensor.data, None)
-    
-    
+    check_error(
+        lib.infiniopSwiGLU(
+            descriptor, a_tensor.data, a_tensor.data, b_tensor.data, None
+        )
+    )
+
     assert torch.allclose(a, ans, atol=1e-4, rtol=1e-2)
     print("in-place1 Test passed!")
 
@@ -125,15 +140,19 @@ def test_in_place2(
     a_stride=None,
     b_stride=None,
     dtype=torch.float16,
+    sync=None,
 ):
     a = torch.rand(shape, dtype=dtype).to(torch_device)
     b = torch.rand(shape, dtype=dtype).to(torch_device)
-    ans = swiglu(a, b)
 
     if a_stride is not None:
         a = rearrange_tensor(a, a_stride)
     if b_stride is not None:
         b = rearrange_tensor(b, b_stride)
+    ans = swiglu(a, b)
+
+    if sync is not None:
+        sync()
 
     a_tensor = to_tensor(a, lib)
     b_tensor = to_tensor(b, lib)
@@ -147,8 +166,12 @@ def test_in_place2(
             b_tensor.descriptor,
         )
     )
-    lib.infiniopSwiGLU(descriptor, b_tensor.data, a_tensor.data, b_tensor.data, None)
-    
+    check_error(
+        lib.infiniopSwiGLU(
+            descriptor, b_tensor.data, a_tensor.data, b_tensor.data, None
+        )
+    )
+
     assert torch.allclose(b, ans, atol=1e-4, rtol=1e-2)
     print("in-place2 Test passed!")
 
@@ -198,6 +221,21 @@ def test_bang(lib, test_cases):
     destroy_handle(lib, handle)
 
 
+def test_ascend(lib, test_cases):
+    import torch_npu
+    device = DeviceEnum.DEVICE_ASCEND
+    handle = create_handle(lib, device)
+
+    for shape, a_stride, b_stride, c_stride, dtype in test_cases:
+        test_out_of_place(
+            lib, handle, "npu", shape, a_stride, b_stride, c_stride, dtype, torch.npu.synchronize
+        )
+        test_in_place1(lib, handle, "npu", shape, a_stride, b_stride, dtype, torch.npu.synchronize)
+        test_in_place2(lib, handle, "npu", shape, a_stride, b_stride, dtype, torch.npu.synchronize)
+
+    destroy_handle(lib, handle) 
+
+
 if __name__ == "__main__":
     test_cases = [
         # shape, a_stride, b_stride, c_stride, dtype
@@ -238,3 +276,5 @@ if __name__ == "__main__":
         test_cuda(lib, test_cases)
     if args.bang:
         test_bang(lib, test_cases)
+    if args.ascend:
+        test_ascend(lib, test_cases)

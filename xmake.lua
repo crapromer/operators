@@ -1,4 +1,8 @@
 add_rules("mode.debug", "mode.release")
+-- Define color codes
+local GREEN = '\27[0;32m'
+local YELLOW = '\27[1;33m'
+local NC = '\27[0m'  -- No Color
 
 add_includedirs("include")
 
@@ -7,6 +11,12 @@ option("cpu")
     set_showmenu(true)
     set_description("Enable or disable cpu kernel")
     add_defines("ENABLE_CPU")
+option_end()
+
+option("omp")
+    set_default(false)
+    set_showmenu(true)
+    set_description("Enable or disable OpenMP support for cpu kernel")
 option_end()
 
 option("nv-gpu")
@@ -47,6 +57,7 @@ if has_config("cpu") then
 
     add_defines("ENABLE_CPU")
     target("cpu")
+        on_install(function (target) end)
         set_kind("static")
 
         if not is_plat("windows") then
@@ -55,8 +66,10 @@ if has_config("cpu") then
 
         set_languages("cxx17")
         add_files("src/devices/cpu/*.cc", "src/ops/*/cpu/*.cc")
-        add_cxflags("-fopenmp")
-        add_ldflags("-fopenmp")
+        if has_config("omp") then
+            add_cxflags("-fopenmp")
+            add_ldflags("-fopenmp")
+        end
     target_end()
 
 end
@@ -64,8 +77,18 @@ end
 if has_config("nv-gpu") then
 
     add_defines("ENABLE_NV_GPU")
+    local CUDA_ROOT = os.getenv("CUDA_ROOT") or os.getenv("CUDA_HOME") or os.getenv("CUDA_PATH")
+    local CUDNN_ROOT = os.getenv("CUDNN_ROOT") or os.getenv("CUDNN_HOME") or os.getenv("CUDNN_PATH")
+    if CUDA_ROOT ~= nil then
+        add_includedirs(CUDA_ROOT .. "/include")
+    end
+    if CUDNN_ROOT ~= nil then
+        add_includedirs(CUDNN_ROOT .. "/include")
+    end
+
     target("nv-gpu")
         set_kind("static")
+        on_install(function (target) end)
         set_policy("build.cuda.devlink", true)
 
         set_toolchains("cuda")
@@ -75,6 +98,9 @@ if has_config("nv-gpu") then
 
         if is_plat("windows") then
             add_cuflags("-Xcompiler=/utf-8", "--expt-relaxed-constexpr", "--allow-unsupported-compiler")
+            if CUDNN_ROOT ~= nil then
+                add_linkdirs(CUDNN_ROOT .. "\\lib\\x64")
+            end
         else
             add_cuflags("-Xcompiler=-fPIC")
             add_culdflags("-Xcompiler=-fPIC")
@@ -114,7 +140,7 @@ if has_config("cambricon-mlu") then
 
             local includedirs = table.concat(target:get("includedirs"), " ")
             local args = {"-c", sourcefile, "-o", objectfile, "-I/usr/local/neuware/include", "--bang-mlu-arch=mtp_592", "-O3", "-fPIC", "-Wall", "-Werror", "-std=c++17", "-pthread"}
-            
+
             for _, includedir in ipairs(target:get("includedirs")) do
                 table.insert(args, "-I" .. includedir)
             end
@@ -124,10 +150,14 @@ if has_config("cambricon-mlu") then
         end)
 
     rule_end()
+<<<<<<< HEAD
 
+=======
+>>>>>>> upstream/dev
 
     target("cambricon-mlu")
         set_kind("static")
+        on_install(function (target) end)
         set_languages("cxx17")
         add_files("src/devices/bang/*.cc", "src/ops/*/bang/*.cc")
         add_files("src/ops/*/bang/*.mlu", {rule = "mlu"})
@@ -149,21 +179,52 @@ if has_config("ascend-npu") then
     add_links("libascendcl.so")
     add_links("libnnopbase.so")
     add_links("libopapi.so")
-    add_links("libruntime.so")  
+    add_links("libruntime.so")
     add_linkdirs(ASCEND_HOME .. "/../../driver/lib64/driver")
     add_links("libascend_hal.so")
+    local builddir = string.format(
+            "%s/build/%s/%s/%s",
+            os.projectdir(),
+            get_config("plat"),
+            get_config("arch"),
+            get_config("mode")
+        )
+    rule("ascend-kernels")
+        before_link(function ()
+            local ascend_build_dir = path.join(os.projectdir(), "src/devices/ascend")
+            os.cd(ascend_build_dir)
+            os.exec("make")
+            os.exec("cp $(projectdir)/src/devices/ascend/build/lib/libascend_kernels.a "..builddir.."/")
+            os.cd(os.projectdir())
+
+        end)
+        after_clean(function ()
+            local ascend_build_dir = path.join(os.projectdir(), "src/devices/ascend")
+            os.cd(ascend_build_dir)
+            os.exec("make clean")
+            os.cd(os.projectdir())
+            os.rm(builddir.. "/libascend_kernels.a")
+
+        end)
+    rule_end()
 
     target("ascend-npu")
         -- Other configs
         set_kind("static")
         set_languages("cxx17")
+        on_install(function (target) end)
         -- Add files
         add_files("src/devices/ascend/*.cc", "src/ops/*/ascend/*.cc")
         add_cxflags("-lstdc++ -Wall -Werror -fPIC")
 
+        -- Add operator
+        add_rules("ascend-kernels")
+        add_links(builddir.."/libascend_kernels.a")
+
     target_end()
 end
 
+<<<<<<< HEAD
 
 
 if has_config("teco") then
@@ -213,6 +274,9 @@ if has_config("teco") then
 end
 
 target("operators")
+=======
+target("infiniop")
+>>>>>>> upstream/dev
     set_kind("shared")
 
     if has_config("cpu") then
@@ -234,30 +298,10 @@ target("operators")
     add_files("src/devices/handle.cc")
     add_files("src/ops/*/operator.cc")
     add_files("src/tensor/*.cc")
+    after_build(function (target) print(YELLOW .. "You can install the libraries with \"xmake install\"" .. NC) end)
+
+    set_installdir(os.getenv("INFINI_ROOT") or (os.getenv(is_host("windows") and "HOMEPATH" or "HOME") .. "/.infini"))
+    add_installfiles("include/(**/*.h)", {prefixdir = "include"})
+    add_installfiles("include/*.h", {prefixdir = "include"})
+
 target_end()
-
-task("install-operators")
-    set_menu {
-        usage = "xmake install-operators",
-        description = "Build and install the operators",
-        options = {}
-    }
-    on_run(function ()
-        os.exec("xmake --root")
-        os.exec("mkdir -p $(projectdir)/lib/")
-        os.exec("cp $(projectdir)/build/linux/x86_64/release/liboperators.so $(projectdir)/lib/")
-        os.exec("cp -r $(projectdir)/include $(projectdir)/lib/")
-        -- Define color codes
-        local GREEN = '\27[0;32m'
-        local YELLOW = '\27[1;33m'
-        local NC = '\27[0m'  -- No Color
-
-        -- Get the current directory
-        local current_dir = os.curdir()
-
-        -- Output messages with colors
-        os.exec("echo -e '" .. GREEN .. "Compilation completed successfully." .. NC .. "'")
-        os.exec("echo -e '" .. YELLOW .. "To set the environment variable, please run the following command:" .. NC .. "'")
-        os.exec("echo -e '" .. YELLOW .. "echo \"export INFINI_ROOT=" .. current_dir .. "/lib\" >> ~/.bashrc" .. NC .. "'")
-
-    end)

@@ -46,9 +46,9 @@ infiniopStatus_t cudaCreateAddDescriptor(CudaHandle_t handle,
     cudaGetDeviceProperties(&prop, handle->device_id);
 
     int64_t *a_strides_d, *b_strides_d, *c_strides_d;
-    checkCudaErrorWithCode(cudaMalloc(&a_strides_d, ndim * sizeof(int64_t)), STATUS_MEMORY_NOT_ALLOCATED);
-    checkCudaErrorWithCode(cudaMalloc(&b_strides_d, ndim * sizeof(int64_t)), STATUS_MEMORY_NOT_ALLOCATED);
-    checkCudaErrorWithCode(cudaMalloc(&c_strides_d, ndim * sizeof(int64_t)), STATUS_MEMORY_NOT_ALLOCATED);
+    checkCudaErrorWithCode(cudaMalloc((void **) &a_strides_d, ndim * sizeof(int64_t)), STATUS_MEMORY_NOT_ALLOCATED);
+    checkCudaErrorWithCode(cudaMalloc((void **) &b_strides_d, ndim * sizeof(int64_t)), STATUS_MEMORY_NOT_ALLOCATED);
+    checkCudaErrorWithCode(cudaMalloc((void **) &c_strides_d, ndim * sizeof(int64_t)), STATUS_MEMORY_NOT_ALLOCATED);
     checkCudaErrorWithCode(cudaMemcpy(a_strides_d, a_strides, ndim * sizeof(int64_t), cudaMemcpyHostToDevice), STATUS_EXECUTION_FAILED);
     checkCudaErrorWithCode(cudaMemcpy(b_strides_d, b_strides, ndim * sizeof(int64_t), cudaMemcpyHostToDevice), STATUS_EXECUTION_FAILED);
     checkCudaErrorWithCode(cudaMemcpy(c_strides_d, c->strides, ndim * sizeof(int64_t), cudaMemcpyHostToDevice), STATUS_EXECUTION_FAILED);
@@ -73,9 +73,9 @@ infiniopStatus_t cudaCreateAddDescriptor(CudaHandle_t handle,
 }
 
 infiniopStatus_t cudaDestroyAddDescriptor(AddCudaDescriptor_t desc) {
-    cudaFree((void *) desc->a_strides);
-    cudaFree((void *) desc->b_strides);
-    cudaFree((void *) desc->c_strides);
+    checkCudaErrorWithCode(cudaFree((void *) desc->a_strides), STATUS_EXECUTION_FAILED);
+    checkCudaErrorWithCode(cudaFree((void *) desc->b_strides), STATUS_EXECUTION_FAILED);
+    checkCudaErrorWithCode(cudaFree((void *) desc->c_strides), STATUS_EXECUTION_FAILED);
     delete desc;
     return STATUS_SUCCESS;
 }

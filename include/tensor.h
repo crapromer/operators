@@ -17,5 +17,8 @@ struct TensorDescriptor {
 
 typedef struct TensorDescriptor *infiniopTensorDescriptor_t;
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> upstream/dev
 #endif// __TENSOR_H__

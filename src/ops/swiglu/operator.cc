@@ -10,7 +10,9 @@
 #endif
 #ifdef ENABLE_CAMBRICON_MLU
 #include "bang/swiglu_bang.h"
-#include "bang/swiglu_cnnl.h"
+#endif
+#ifdef ENABLE_ASCEND_NPU
+#include "ascend/swiglu.h"
 #endif
 
 __C infiniopStatus_t infiniopCreateSwiGLUDescriptor(infiniopHandle_t handle,
@@ -36,6 +38,14 @@ __C infiniopStatus_t infiniopCreateSwiGLUDescriptor(infiniopHandle_t handle,
                                               b_desc);
         }
 #endif
+#ifdef ENABLE_ASCEND_NPU
+        case DevAscendNpu:
+            return ascendCreateSwiGLUDescriptor((AscendHandle_t) handle,
+                                                (SwiGLUAscendDescriptor_t *) desc_ptr,
+                                                c_desc,
+                                                a_desc,
+                                                b_desc);
+#endif
     }
     return STATUS_BAD_DEVICE;
 };
@@ -59,6 +69,10 @@ __C infiniopStatus_t infiniopSwiGLU(infiniopSwiGLUDescriptor_t desc,
             return bangSwiGLU((SwiGLUBangDescriptor_t) desc, c, a, b, stream);
         }
 #endif
+#ifdef ENABLE_ASCEND_NPU
+        case DevAscendNpu:
+            return ascendSwiGLU((SwiGLUAscendDescriptor_t) desc, c, a, b, stream);
+#endif
     }
     return STATUS_BAD_DEVICE;
 }
@@ -77,6 +91,10 @@ __C infiniopStatus_t infiniopDestroySwiGLUDescriptor(infiniopSwiGLUDescriptor_t 
         case DevCambriconMlu: {
             return bangDestroySwiGLUDescriptor((SwiGLUBangDescriptor_t) desc);
         }
+#endif
+#ifdef ENABLE_ASCEND_NPU
+        case DevAscendNpu:
+            return ascendDestroySwiGLUDescriptor((SwiGLUAscendDescriptor_t) desc);
 #endif
     }
     return STATUS_BAD_DEVICE;
