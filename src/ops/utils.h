@@ -4,11 +4,8 @@
 #include "data_type.h"
 #include "tensor.h"
 #include <algorithm>
-<<<<<<< HEAD
 #include <functional>
-=======
 #include <iostream>
->>>>>>> upstream/dev
 #include <numeric>
 #include <stdio.h>
 #include <stdlib.h>

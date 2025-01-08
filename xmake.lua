@@ -224,7 +224,6 @@ if has_config("ascend-npu") then
     target_end()
 end
 
-<<<<<<< HEAD
 
 
 if has_config("teco") then
@@ -273,10 +272,7 @@ if has_config("teco") then
 
 end
 
-target("operators")
-=======
 target("infiniop")
->>>>>>> upstream/dev
     set_kind("shared")
 
     if has_config("cpu") then
