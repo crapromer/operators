@@ -8,18 +8,15 @@ infiniopStatus_t createTecoHandle(TecoHandle_t *handle_ptr, int device_id) {
     }
 
     sdaaSetDevice(device_id);
-
-    *handle_ptr = new TecoContext{DevTecoSDAA, device_id};
-    tecoblasCreate(&(*handle_ptr)->handle);
-    sdaaStreamCreate(&(*handle_ptr)->stream);
-    tecoblasSetStream((*handle_ptr)->handle,(*handle_ptr)->stream);
-
+    sdaaStream_t stream;
+    sdaaStreamCreate(&stream);
+    *handle_ptr = new TecoContext{DevTecoSDAA, device_id,stream};
+    
     return STATUS_SUCCESS;
 }
 
 infiniopStatus_t deleteTecoHandle(TecoHandle_t handle_ptr) {
     sdaaStreamDestroy(handle_ptr->stream);
-    tecoblasDestroy(handle_ptr->handle);
     delete handle_ptr;
     return STATUS_SUCCESS;
 }

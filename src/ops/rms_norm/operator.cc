@@ -85,14 +85,11 @@ __C infiniopStatus_t infiniopGetRMSNormWorkspaceSize(infiniopRMSNormDescriptor_t
             return aclnnGetRMSNormWorkspaceSize((RMSNormAclnnDescriptor_t) desc,
                                                 size);
         }
-<<<<<<< HEAD
 #endif
 #ifdef ENABLE_TECO_SDAA
         case DevTecoSDAA: {
             return tecoGetRMSNormWorkspaceSize((RMSNormTecoDescriptor_t) desc, size);
         }
-=======
->>>>>>> upstream/dev
 #endif
     }
     return STATUS_BAD_DEVICE;

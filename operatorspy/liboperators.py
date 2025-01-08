@@ -53,12 +53,8 @@ def open_lib():
     if system_name == "Windows":
         library_path = find_library_in_ld_path("infiniop.dll")
     elif system_name == "Linux":
-<<<<<<< HEAD
-        library_path = find_library_in_ld_path("liboperators.so")
-=======
         library_path = find_library_in_ld_path("libinfiniop.so")
 
->>>>>>> upstream/dev
     assert (
         library_path is not None
     ), f"Cannot find infiniop.dll or libinfiniop.so. Check if INFINI_ROOT is set correctly."

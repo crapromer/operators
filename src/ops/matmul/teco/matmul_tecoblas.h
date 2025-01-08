@@ -9,12 +9,13 @@ struct MatmulTecoDescriptor {
     int device_id;
     tecoblasHandle_t handle;
     sdaaStream_t stream;
+    tecoblasDataType_t datatype;
     tecoblasOperation_t transa,transb;
-    int m,n,k;
+    uint64_t m,n,k;
     float alpha,beta;
-    int lda,ldb,ldc;
-    int batch;
-    long long int strideA,strideB,strideC;
+    long long int lda,ldb,ldc;
+    long long int batch,batch_count;
+    long int strideA,strideB,strideC;
 };
 
 typedef struct MatmulTecoDescriptor *MatmulTecoDescriptor_t;

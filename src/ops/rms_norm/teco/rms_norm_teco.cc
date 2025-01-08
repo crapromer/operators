@@ -17,8 +17,8 @@ infiniopStatus_t tecoCreateRMSNormDescriptor(TecoHandle_t handle, RMSNormTecoDes
 
     tecodnnHandle_t tecodnn_handle;
     tecodnnCreate(&tecodnn_handle);
-    sdaaStream_t stream;
-    sdaaStreamCreate(&stream);
+    // sdaaStream_t stream;
+    // sdaaStreamCreate(&stream);
     tecodnnTensorDescriptor_t x_desc_teco,y_desc_teco,w_desc_teco,rms_desc_teco;
     tecodnnCreateTensorDescriptor(&x_desc_teco);
     tecodnnCreateTensorDescriptor(&y_desc_teco);
@@ -35,20 +35,23 @@ infiniopStatus_t tecoCreateRMSNormDescriptor(TecoHandle_t handle, RMSNormTecoDes
     //     tecodnnSetTensor4dDescriptor(w_desc_teco,TECODNN_TENSOR_NCHW,TECODNN_DATA_FLOAT,1,1,1,w_desc->shape[0]);
     // tecodnnSetTensor4dDescriptor(rms_desc_teco,TECODNN_TENSOR_NCHW,TECODNN_DATA_FLOAT,n,1,1,1);
     
-    if(w_desc->dt==F16)
+    if(w_desc->dt==F16){
         tecodnnSetTensor4dDescriptor(x_desc_teco,TECODNN_TENSOR_NCHW,TECODNN_DATA_HALF,n,h,w,c);
         tecodnnSetTensor4dDescriptor(y_desc_teco,TECODNN_TENSOR_NCHW,TECODNN_DATA_HALF,n,h,w,c);
         tecodnnSetTensor4dDescriptor(w_desc_teco,TECODNN_TENSOR_NCHW,TECODNN_DATA_HALF,1,1,1,c);
         tecodnnSetTensor4dDescriptor(rms_desc_teco,TECODNN_TENSOR_NCHW,TECODNN_DATA_FLOAT,n,h,w,1);
-    if(w_desc->dt==F32)
+    }
+        
+    if(w_desc->dt==F32){
         tecodnnSetTensor4dDescriptor(x_desc_teco,TECODNN_TENSOR_NCHW,TECODNN_DATA_HALF,n,h,w,c);
         tecodnnSetTensor4dDescriptor(y_desc_teco,TECODNN_TENSOR_NCHW,TECODNN_DATA_HALF,n,h,w,c);
         tecodnnSetTensor4dDescriptor(w_desc_teco,TECODNN_TENSOR_NCHW,TECODNN_DATA_FLOAT,1,1,1,c);
         tecodnnSetTensor4dDescriptor(rms_desc_teco,TECODNN_TENSOR_NCHW,TECODNN_DATA_FLOAT,n,h,w,1);
+    }
     *desc_ptr = new RMSNormTecoDescriptor{
         handle->device,
         tecodnn_handle,
-        stream,
+        handle->stream,
         epsilon,
         x_desc_teco,
         y_desc_teco,
@@ -57,15 +60,16 @@ infiniopStatus_t tecoCreateRMSNormDescriptor(TecoHandle_t handle, RMSNormTecoDes
         n,
         c,
         };
+    tecodnnSetStream((*desc_ptr)->handle,(*desc_ptr)->stream);
     return STATUS_SUCCESS;
 }
 
 infiniopStatus_t tecoGetRMSNormWorkspaceSize(RMSNormTecoDescriptor_t desc, uint64_t *size) {
-    *size = (desc->n)*(desc->c)*32;
+    *size = (desc->n)*(desc->c)*4;
     return STATUS_SUCCESS;
 }
 
-infiniopStatus_t tecoRMSNorm(RMSNormTecoDescriptor_t desc, void *workspace, uint64_t workspace_size, void *y, void *x, void *w, void *stream) {
+infiniopStatus_t tecoRMSNorm(RMSNormTecoDescriptor_t desc, void *workspace, uint64_t workspace_size, void *y, void const *x, void const *w, void *stream) {
     tecodnnSetStream(desc->handle, desc->stream);
     tecodnnStatus_t status;
     

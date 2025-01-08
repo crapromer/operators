@@ -6,7 +6,6 @@
 struct TecoContext {
     Device device;
     int device_id;
-    tecoblasHandle_t handle;
     sdaaStream_t stream;
 };
 typedef struct TecoContext *TecoHandle_t;

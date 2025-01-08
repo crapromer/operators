@@ -27,7 +27,7 @@ infiniopStatus_t tecoGetRMSNormWorkspaceSize(RMSNormTecoDescriptor_t desc, uint6
 infiniopStatus_t tecoRMSNorm(RMSNormTecoDescriptor_t desc,
                                   void *workspace,
                                   uint64_t workspace_size,
-                                  void *y, void *x, void *w, 
+                                  void *y, void const *x, void const *w, 
                                   void *stream);
 
 infiniopStatus_t tecoDestroyRMSNormDescriptor(RMSNormTecoDescriptor_t desc);

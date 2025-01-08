@@ -84,12 +84,8 @@ def test(
         b = rearrange_tensor(b, b_stride)
     if c_stride is not None:
         c = rearrange_tensor(c, c_stride)
-<<<<<<< HEAD
     ans = matmul(c, beta, a, b, alpha)
     
-=======
-
->>>>>>> upstream/dev
     a_tensor = to_tensor(a, lib)
     b_tensor = to_tensor(b, lib)
     c_tensor = to_tensor(c, lib)
@@ -162,6 +158,7 @@ def test(
         print(f"    lib time: {elapsed :6f}")
 
     check_error(lib.infiniopDestroyMatmulDescriptor(descriptor))
+    print("Test passed!")
 
 
 def test_cpu(lib, test_cases):
@@ -391,10 +388,6 @@ if __name__ == "__main__":
         test_ascend(lib, test_cases)
     if not (args.cpu or args.cuda or args.bang or args.ascend):
         test_cpu(lib, test_cases)
-<<<<<<< HEAD
     if args.teco:
         test_sdaa(lib,test_cases)
     print("Test passed!")
-=======
-    print("\033[92mTest passed!\033[0m")
->>>>>>> upstream/dev

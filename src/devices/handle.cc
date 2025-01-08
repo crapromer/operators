@@ -15,7 +15,6 @@
 #include "./teco/teco_handle.h"
 #endif
 
-
 __C infiniopStatus_t infiniopCreateHandle(infiniopHandle_t *handle_ptr, Device device, int device_id) {
     if (handle_ptr == nullptr) {
         return STATUS_MEMORY_NOT_ALLOCATED;
