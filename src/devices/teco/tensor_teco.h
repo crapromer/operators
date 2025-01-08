@@ -12,6 +12,8 @@ struct tecoTensorDescriptor {
     int64_t *shape;
     int64_t *strides;
     tecoblasDataType_t data_type;
+    tecodnnDataType_t data_type;
+    tecodnnTensorDescriptor_t 
     infiniopStatus_t fromInfiniOpTensorDescriptor(infiniopTensorDescriptor_t y_desc);
     infiniopStatus_t createTensor();
     infiniopStatus_t destroyTensor();

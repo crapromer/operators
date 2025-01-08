@@ -31,7 +31,7 @@ infiniopStatus_t tecoCreateMatmulDescriptor(TecoHandle_t handle, MatmulTecoDescr
         (*desc_ptr)->n = b_desc->shape[2];
         (*desc_ptr)->transa = TECOBLAS_OP_N;
         (*desc_ptr)->transb = TECOBLAS_OP_N;
-        (*desc_ptr)->lda = a_desc->strides[1];
+        (*desc_ptr)->lda = a_desc->strides[1]; 
         (*desc_ptr)->ldb = b_desc->strides[1];
         (*desc_ptr)->ldc = c_desc->strides[1];
         (*desc_ptr)->strideA = a_desc->strides[0];

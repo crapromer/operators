@@ -5,7 +5,9 @@
 #include <stdlib.h>
 #include <sdaa_runtime.h>
 #include <tecoblas.h>
+#include <tecodnn.h>
 #include "device.h"
+#include "operators.h"
 #include <iostream>
 #define CHECK_TECOBLAS(expression)                                                               \
     {                                                                                            \
@@ -16,5 +18,7 @@
         }                                                                                        \
     }
 void** convertToBatch(void* data, int batch, int m, int n, size_t typeSize);
+
+infiniopStatus_t toTecodnnTensorDescriptor(infiniopTensorDescriptor_t src,tecodnnTensorDescriptor_t des);
 
 #endif

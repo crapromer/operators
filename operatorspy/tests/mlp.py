@@ -223,6 +223,37 @@ def test_bang(lib, test_cases):
 
     destroy_handle(lib, handle)
 
+def test_sdaa(lib, test_cases):
+    import torch_sdaa
+
+    device = DeviceEnum.DEVICE_TECO
+    handle = create_handle(lib, device)
+
+    for (
+        num_tokens,
+        hidden_size,
+        intermediate_size,
+        alpha,
+        residual,
+        dtype,
+        x_stride,
+        y_stride,
+    ) in test_cases:
+        test(
+            lib,
+            handle,
+            "sdaa",
+            num_tokens,
+            hidden_size,
+            intermediate_size,
+            alpha,
+            residual,
+            dtype,
+            x_stride,
+            y_stride,
+        )
+
+    destroy_handle(lib, handle)
 
 if __name__ == "__main__":
     test_cases = [
@@ -278,4 +309,6 @@ if __name__ == "__main__":
         test_bang(lib, test_cases)
     if not (args.cpu or args.cuda or args.bang):
         test_cpu(lib, test_cases)
+    if args.teco:
+        test_sdaa(lib,test_cases)
     print("Test passed!")

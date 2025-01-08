@@ -12,3 +12,11 @@ void** convertToBatch(void* data, int batch, int m, int n, size_t typeSize){
     // Return the output array of pointers
     return output;
 }
+
+infiniopStatus_t toTecodnnTensorDescriptor(infiniopTensorDescriptor_t src, tecodnnTensorDescriptor_t des) {
+    tecodnnDataType_t data_type;
+    if(src->dt==F16)
+        data_type = TECODNN_DATA_HALF;
+    tecodnnSetTensor4dDescriptor(des,TECODNN_TENSOR_NCHW,data_type,src->shape[0],src->shape[1],1,1);
+    return STATUS_SUCCESS;
+}

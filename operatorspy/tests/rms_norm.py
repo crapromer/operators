@@ -77,10 +77,6 @@ def test(lib, handle, torch_device, y_shape, x_shape, w_shape, dtype=torch.float
         )
     )
 
-    # print(ans)
-    # print("=======================================================")
-    # print(y)
-
     assert torch.allclose(y.to(dtype), ans.to(dtype), atol=1e-3, rtol=1e-3)
     check_error(lib.infiniopDestroyRMSNormDescriptor(descriptor))
     print("Test passed!")
@@ -105,6 +101,14 @@ def test_bang(lib, test_cases):
     handle = create_handle(lib, device)
     for (y_shape, x_shape, w_shape, dtype, w_dtype) in test_cases:
         test(lib, handle, "mlu", y_shape, x_shape, w_shape, dtype, w_dtype)
+    destroy_handle(lib, handle)
+
+def test_sdaa(lib, test_cases):
+    import torch_sdaa
+    device = DeviceEnum.DEVICE_TECO
+    handle = create_handle(lib, device)
+    for (y_shape, x_shape, w_shape, dtype, w_dtype) in test_cases:
+        test(lib, handle, "sdaa", y_shape, x_shape, w_shape, dtype, w_dtype)
     destroy_handle(lib, handle)
 
 
@@ -153,5 +157,7 @@ if __name__ == "__main__":
         test_cuda(lib, test_cases)
     if args.bang:
         test_bang(lib, test_cases)
+    if args.teco:
+        test_sdaa(lib,test_cases)
     if not (args.cpu or args.cuda or args.bang):
         test_cpu(lib, test_cases)

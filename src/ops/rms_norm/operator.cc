@@ -15,6 +15,10 @@
 #include "bang/rms_norm_bang.h"
 #include "bang/rms_norm_cnnl.h"
 #endif
+#ifdef ENABLE_TECO_SDAA
+#include "teco/rms_norm_teco.h"
+#endif
+
 
 __C infiniopStatus_t infiniopCreateRMSNormDescriptor(
     infiniopHandle_t handle,
@@ -38,6 +42,11 @@ __C infiniopStatus_t infiniopCreateRMSNormDescriptor(
             //return bangCreateRMSNormDescriptor((BangHandle_t) handle, (RMSNormBangDescriptor_t *) desc_ptr, y_desc);
         }
 #endif
+#ifdef ENABLE_TECO_SDAA
+        case DevTecoSDAA: {
+            return tecoCreateRMSNormDescriptor((TecoHandle_t) handle, (RMSNormTecoDescriptor_t *) desc_ptr, y_desc, x_desc, w_desc, epsilon);
+        }
+#endif
     }
     return STATUS_BAD_DEVICE;
 }
@@ -58,7 +67,11 @@ __C infiniopStatus_t infiniopGetRMSNormWorkspaceSize(infiniopRMSNormDescriptor_t
         case DevCambriconMlu: {
             //return bangGetRMSNormWorkspaceSize((RMSNormBangDescriptor_t) desc, size);
         }
-
+#endif
+#ifdef ENABLE_TECO_SDAA
+        case DevTecoSDAA: {
+            return tecoGetRMSNormWorkspaceSize((RMSNormTecoDescriptor_t) desc, size);
+        }
 #endif
     }
     return STATUS_BAD_DEVICE;
@@ -83,6 +96,17 @@ __C infiniopStatus_t infiniopRMSNorm(infiniopRMSNormDescriptor_t desc, void *wor
         }
 
 #endif
+#ifdef ENABLE_TECO_SDAA
+        case DevTecoSDAA: {
+            return tecoRMSNorm((RMSNormTecoDescriptor_t) desc,
+                               workspace,
+                               workspace_size,
+                               y,
+                               x,
+                               w,
+                               stream);
+        }
+#endif
     }
     return STATUS_BAD_DEVICE;
 }
@@ -104,6 +128,11 @@ __C infiniopStatus_t infiniopDestroyRMSNormDescriptor(infiniopRMSNormDescriptor_
             //return bangDestroyRMSNormDescriptor((RMSNormBangDescriptor_t) desc);
         }
 
+#endif
+#ifdef ENABLE_TECO_SDAA
+        case DevTecoSDAA: {
+            return tecoDestroyRMSNormDescriptor((RMSNormTecoDescriptor_t) desc);
+        }
 #endif
     }
     return STATUS_BAD_DEVICE;

@@ -173,6 +173,7 @@ if has_config("teco") then
     add_linkdirs("/opt/tecoai/lib64")
     add_links("libsdaart.so")
     add_links("libtecoblas.so")
+    add_links("libtecodnn.so")
 
     rule("scpp")
         set_extensions(".scpp")
