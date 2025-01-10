@@ -17,7 +17,10 @@
             exit(EXIT_FAILURE);                                                                  \
         }                                                                                        \
     }
-void** convertToBatch(void* data, int batch, int m, int n, size_t typeSize);
+void const** convertToBatch(void const* data, int batch, int stride, size_t typeSize);
+bool is_contiguous(infiniopTensorDescriptor_t desc);
+infiniopStatus_t toContiguous(infiniopTensorDescriptor_t desc,void *data,tecodnnDataType_t datatype);
+infiniopStatus_t restoreTensor(infiniopTensorDescriptor_t desc,void *data,tecodnnDataType_t datatype);
 
 infiniopStatus_t toTecodnnTensorDescriptor(infiniopTensorDescriptor_t src,tecodnnTensorDescriptor_t des);
 

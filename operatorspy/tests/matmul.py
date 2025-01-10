@@ -101,7 +101,7 @@ def test(
             beta
         )
     )
-
+    print(a.stride(),b.stride(),c.stride())
     workspace_size = c_uint64(0)
     check_error(
         lib.infiniopGetMatmulWorkspaceSize(descriptor, ctypes.byref(workspace_size))

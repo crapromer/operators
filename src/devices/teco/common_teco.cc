@@ -1,16 +1,93 @@
 #include "common_teco.h"
-void** convertToBatch(void* data, int batch, int m, int n, size_t typeSize){
-    // Dynamically allocate memory for the output array of pointers
-    void** output = new void*[batch];
-
-    // Treat the void* data as a pointer to raw memory and use pointer arithmetic
-    for (int i = 0; i < batch; i++) {
-        // Output[i] will point to the i-th 2D slice (this is done in raw pointer arithmetic)
-        output[i] = static_cast<void*>(static_cast<char*>(data) + i * m * n * typeSize);
+void const** convertToBatch(void const* data, int batch, int stride, size_t typeSize){
+    void const **output = (void const **)malloc(batch * sizeof(void const *));
+    if (output == NULL) {
+        return NULL;
     }
 
-    // Return the output array of pointers
+    const uint8_t *charData = (const uint8_t *)data;
+
+    for (int i = 0; i < batch; i++) {
+        output[i] = (const void *)(charData + i * stride * typeSize);
+    }
+
     return output;
+}
+
+bool is_contiguous(infiniopTensorDescriptor_t desc) {
+    uint64_t ndim = desc->ndim;
+    if (desc->strides[ndim-1] != 1) {
+        return false;
+    }else
+        return true;  
+}
+
+infiniopStatus_t restoreTensor(infiniopTensorDescriptor_t desc, void *data,tecodnnDataType_t datatype) {
+    tecodnnHandle_t tecodnn_handle;
+    tecodnnCreate(&tecodnn_handle);
+    tecodnnTensorDescriptor_t src,dst;
+    tecodnnCreateTensorDescriptor(&src);
+    tecodnnCreateTensorDescriptor(&dst);
+    int *strides = new int[desc->ndim];
+    int *old_strides = new int[desc->ndim];
+    int *shape = new int[desc->ndim];
+    strides[desc->ndim - 1] = 1;  // 最后一维的 stride 为 1
+    old_strides[desc->ndim - 1] = desc->strides[desc->ndim - 1];
+    shape[desc->ndim - 1] = desc->shape[desc->ndim - 1];
+    for (int i = desc->ndim - 2; i >= 0; --i) {
+        strides[i] = strides[i + 1] * desc->shape[i + 1];  // 当前维度的 stride
+        shape[i] = desc->shape[i];
+        old_strides[i] = desc->strides[i];
+    }
+    size_t size = strides[0]*desc->shape[0];
+    if(datatype==TECODNN_DATA_HALF)
+        size*=sizeof(uint16_t);
+    else
+        size*=sizeof(uint32_t);
+    void *temp;
+    sdaaMalloc(&temp,size);
+    tecodnnSetTensorNdDescriptor(src,datatype,desc->ndim,shape,strides);
+    tecodnnSetTensorNdDescriptor(dst,datatype,desc->ndim,shape,old_strides);
+    tecodnnCopyStride(tecodnn_handle,src,data,dst,temp);
+    sdaaMemcpy(data, temp, size, sdaaMemcpyDeviceToDevice);
+    sdaaFree(temp);
+
+    return STATUS_SUCCESS;
+}
+
+infiniopStatus_t toContiguous(infiniopTensorDescriptor_t desc, void *data,tecodnnDataType_t datatype) {
+    tecodnnHandle_t tecodnn_handle;
+    tecodnnCreate(&tecodnn_handle);
+    tecodnnTensorDescriptor_t src,dst;
+    tecodnnCreateTensorDescriptor(&src);
+    tecodnnCreateTensorDescriptor(&dst);
+    int *strides = new int[desc->ndim];
+    int *old_strides = new int[desc->ndim];
+    int *shape = new int[desc->ndim];
+    strides[desc->ndim - 1] = 1; 
+    old_strides[desc->ndim - 1] = desc->strides[desc->ndim - 1];
+    shape[desc->ndim - 1] = desc->shape[desc->ndim - 1];
+    for (int i = desc->ndim - 2; i >= 0; --i) {
+        strides[i] = strides[i + 1] * desc->shape[i + 1]; 
+        shape[i] = desc->shape[i];
+        old_strides[i] = desc->strides[i];
+    }
+    size_t size = strides[0]*desc->shape[0];
+    if(datatype==TECODNN_DATA_HALF){
+        size*=sizeof(uint16_t);
+    }
+    else{
+        size*=sizeof(uint32_t);
+    }
+    void *temp;
+    sdaaMalloc(&temp,size);
+    tecodnnSetTensorNdDescriptor(src,datatype,desc->ndim,shape,old_strides);
+    tecodnnSetTensorNdDescriptor(dst,datatype,desc->ndim,shape,strides);
+    tecodnnCopyStride(tecodnn_handle,src,data,dst,temp);
+    sdaaMemcpy(data, temp, size, sdaaMemcpyDeviceToDevice);
+    sdaaFree(temp);
+
+    return STATUS_SUCCESS;
 }
 
 infiniopStatus_t toTecodnnTensorDescriptor(infiniopTensorDescriptor_t src, tecodnnTensorDescriptor_t des) {
@@ -20,3 +97,5 @@ infiniopStatus_t toTecodnnTensorDescriptor(infiniopTensorDescriptor_t src, tecod
     tecodnnSetTensor4dDescriptor(des,TECODNN_TENSOR_NCHW,data_type,src->shape[0],src->shape[1],1,1);
     return STATUS_SUCCESS;
 }
+
+

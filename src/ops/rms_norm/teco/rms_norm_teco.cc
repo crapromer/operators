@@ -45,7 +45,7 @@ infiniopStatus_t tecoCreateRMSNormDescriptor(TecoHandle_t handle, RMSNormTecoDes
     if(w_desc->dt==F32){
         tecodnnSetTensor4dDescriptor(x_desc_teco,TECODNN_TENSOR_NCHW,TECODNN_DATA_HALF,n,h,w,c);
         tecodnnSetTensor4dDescriptor(y_desc_teco,TECODNN_TENSOR_NCHW,TECODNN_DATA_HALF,n,h,w,c);
-        tecodnnSetTensor4dDescriptor(w_desc_teco,TECODNN_TENSOR_NCHW,TECODNN_DATA_FLOAT,1,1,1,c);
+        tecodnnSetTensor4dDescriptor(w_desc_teco,TECODNN_TENSOR_NCHW,TECODNN_DATA_HALF,1,1,1,c);
         tecodnnSetTensor4dDescriptor(rms_desc_teco,TECODNN_TENSOR_NCHW,TECODNN_DATA_FLOAT,n,h,w,1);
     }
     *desc_ptr = new RMSNormTecoDescriptor{

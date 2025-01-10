@@ -3,6 +3,7 @@
 #include "operators.h"
 #include <sdaa_runtime.h>
 #include <tecoblas.h>
+#include <tecodnn.h>
 #include "../../../devices/teco/teco_handle.h"
 struct MatmulTecoDescriptor {
     Device device;
@@ -11,11 +12,12 @@ struct MatmulTecoDescriptor {
     sdaaStream_t stream;
     tecoblasDataType_t datatype;
     tecoblasOperation_t transa,transb;
-    uint64_t m,n,k;
+    uint64_t m,k,n;
     float alpha,beta;
     long long int lda,ldb,ldc;
     long long int batch,batch_count;
     long int strideA,strideB,strideC;
+    infiniopTensorDescriptor_t a_desc,b_desc,c_desc;
 };
 
 typedef struct MatmulTecoDescriptor *MatmulTecoDescriptor_t;
