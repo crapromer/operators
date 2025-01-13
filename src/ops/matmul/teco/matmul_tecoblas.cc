@@ -2,6 +2,7 @@
 
 infiniopStatus_t tecoCreateMatmulDescriptor(TecoHandle_t handle, MatmulTecoDescriptor_t *desc_ptr, infiniopTensorDescriptor_t c_desc, float alpha, infiniopTensorDescriptor_t a_desc, infiniopTensorDescriptor_t b_desc, float beta) {
     long long int batch,batch_count;
+    infiniopStatus_t status = STATUS_SUCCESS;
     if (a_desc->ndim == 2 && b_desc->ndim == 2) {
         batch = 0;
         batch_count = 1;
@@ -46,13 +47,13 @@ infiniopStatus_t tecoCreateMatmulDescriptor(TecoHandle_t handle, MatmulTecoDescr
         a_desc->strides[0],
         b_desc->strides[0],
         c_desc->strides[0],
-        a_desc,
-        b_desc,
-        c_desc,
+        MatrixInfo(a_desc,&status),
+        MatrixInfo(b_desc,&status),
+        MatrixInfo(c_desc,&status),
         };
     tecoblasSetStream((*desc_ptr)->handle,(*desc_ptr)->stream);
         
-    return STATUS_SUCCESS;
+    return status;
 }
 
 infiniopStatus_t tecoGetMatmulWorkspaceSize(MatmulTecoDescriptor_t desc, uint64_t *size) {

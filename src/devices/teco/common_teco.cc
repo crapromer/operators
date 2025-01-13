@@ -14,40 +14,37 @@ void const** convertToBatch(void const* data, int batch, int stride, size_t type
     return output;
 }
 
-bool is_contiguous(infiniopTensorDescriptor_t desc) {
-    uint64_t ndim = desc->ndim;
-    if (desc->strides[ndim-1] != 1) {
+bool is_contiguous(MatrixInfo desc) {
+    if (desc.ei!= 1) {
         return false;
     }else
         return true;  
 }
 
-infiniopStatus_t restoreTensor(infiniopTensorDescriptor_t desc, void *data,tecodnnDataType_t datatype) {
+infiniopStatus_t restoreTensor(MatrixInfo desc, void *data,tecodnnDataType_t datatype) {
     tecodnnHandle_t tecodnn_handle;
     tecodnnCreate(&tecodnn_handle);
     tecodnnTensorDescriptor_t src,dst;
     tecodnnCreateTensorDescriptor(&src);
     tecodnnCreateTensorDescriptor(&dst);
-    int *strides = new int[desc->ndim];
-    int *old_strides = new int[desc->ndim];
-    int *shape = new int[desc->ndim];
-    strides[desc->ndim - 1] = 1;  // 最后一维的 stride 为 1
-    old_strides[desc->ndim - 1] = desc->strides[desc->ndim - 1];
-    shape[desc->ndim - 1] = desc->shape[desc->ndim - 1];
-    for (int i = desc->ndim - 2; i >= 0; --i) {
-        strides[i] = strides[i + 1] * desc->shape[i + 1];  // 当前维度的 stride
-        shape[i] = desc->shape[i];
-        old_strides[i] = desc->strides[i];
-    }
-    size_t size = strides[0]*desc->shape[0];
+    int *dst_strides = new int[desc.ndim];
+    int *src_strides = new int[desc.ndim];
+    int *shape = new int[desc.ndim];
+    dst_strides[0] = desc.cols;
+    dst_strides[1] = 1; 
+    src_strides[0] = desc.ld;
+    src_strides[1] = desc.ei;
+    shape[0] = desc.rows;
+    shape[1] = desc.cols;
+    size_t size = shape[1]*shape[0];
     if(datatype==TECODNN_DATA_HALF)
         size*=sizeof(uint16_t);
     else
         size*=sizeof(uint32_t);
     void *temp;
     sdaaMalloc(&temp,size);
-    tecodnnSetTensorNdDescriptor(src,datatype,desc->ndim,shape,strides);
-    tecodnnSetTensorNdDescriptor(dst,datatype,desc->ndim,shape,old_strides);
+    tecodnnSetTensorNdDescriptor(src,datatype,desc.ndim,shape,dst_strides);
+    tecodnnSetTensorNdDescriptor(dst,datatype,desc.ndim,shape,src_strides);
     tecodnnCopyStride(tecodnn_handle,src,data,dst,temp);
     sdaaMemcpy(data, temp, size, sdaaMemcpyDeviceToDevice);
     sdaaFree(temp);
@@ -55,24 +52,22 @@ infiniopStatus_t restoreTensor(infiniopTensorDescriptor_t desc, void *data,tecod
     return STATUS_SUCCESS;
 }
 
-infiniopStatus_t toContiguous(infiniopTensorDescriptor_t desc, void *data,tecodnnDataType_t datatype) {
+infiniopStatus_t toContiguous(MatrixInfo desc, void *data,tecodnnDataType_t datatype) {
     tecodnnHandle_t tecodnn_handle;
     tecodnnCreate(&tecodnn_handle);
     tecodnnTensorDescriptor_t src,dst;
     tecodnnCreateTensorDescriptor(&src);
     tecodnnCreateTensorDescriptor(&dst);
-    int *strides = new int[desc->ndim];
-    int *old_strides = new int[desc->ndim];
-    int *shape = new int[desc->ndim];
-    strides[desc->ndim - 1] = 1; 
-    old_strides[desc->ndim - 1] = desc->strides[desc->ndim - 1];
-    shape[desc->ndim - 1] = desc->shape[desc->ndim - 1];
-    for (int i = desc->ndim - 2; i >= 0; --i) {
-        strides[i] = strides[i + 1] * desc->shape[i + 1]; 
-        shape[i] = desc->shape[i];
-        old_strides[i] = desc->strides[i];
-    }
-    size_t size = strides[0]*desc->shape[0];
+    int *dst_strides = new int[desc.ndim];
+    int *src_strides = new int[desc.ndim];
+    int *shape = new int[desc.ndim];
+    dst_strides[0] = desc.cols;
+    dst_strides[1] = 1; 
+    src_strides[0] = desc.ld;
+    src_strides[1] = desc.ei;
+    shape[0] = desc.rows;
+    shape[1] = desc.cols;
+    size_t size = shape[1]*shape[0];
     if(datatype==TECODNN_DATA_HALF){
         size*=sizeof(uint16_t);
     }
@@ -81,8 +76,8 @@ infiniopStatus_t toContiguous(infiniopTensorDescriptor_t desc, void *data,tecodn
     }
     void *temp;
     sdaaMalloc(&temp,size);
-    tecodnnSetTensorNdDescriptor(src,datatype,desc->ndim,shape,old_strides);
-    tecodnnSetTensorNdDescriptor(dst,datatype,desc->ndim,shape,strides);
+    tecodnnSetTensorNdDescriptor(src,datatype,desc.ndim,shape,src_strides);
+    tecodnnSetTensorNdDescriptor(dst,datatype,desc.ndim,shape,dst_strides);
     tecodnnCopyStride(tecodnn_handle,src,data,dst,temp);
     sdaaMemcpy(data, temp, size, sdaaMemcpyDeviceToDevice);
     sdaaFree(temp);

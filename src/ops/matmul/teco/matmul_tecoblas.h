@@ -17,7 +17,7 @@ struct MatmulTecoDescriptor {
     long long int lda,ldb,ldc;
     long long int batch,batch_count;
     long int strideA,strideB,strideC;
-    infiniopTensorDescriptor_t a_desc,b_desc,c_desc;
+    MatrixInfo a_desc,b_desc,c_desc;
 };
 
 typedef struct MatmulTecoDescriptor *MatmulTecoDescriptor_t;
