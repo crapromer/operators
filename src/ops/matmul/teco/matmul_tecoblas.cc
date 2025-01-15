@@ -70,7 +70,6 @@ infiniopStatus_t tecoGetMatmulWorkspaceSize(MatmulTecoDescriptor_t desc, uint64_
                 CHECK_TECOBLAS(tecoblasGetWorkspaceSize(desc->handle, desc->transa, desc->transb, desc->m, desc->n, desc->k, desc->alpha, TECOBLAS_DATA_FLOAT,desc->lda, desc->strideA, TECOBLAS_DATA_FLOAT, desc->ldb, desc->strideB, desc->beta, TECOBLAS_DATA_FLOAT, desc->ldc, desc->strideC, desc->batch_count, TECOBLAS_SGEMM_STRIDED_BATCHED,reinterpret_cast<size_t*>(size)))
         }
     }else{
-        printf("some tensor is not contiguous\n");
         if(desc->batch==0){
             if(desc->datatype == TECOBLAS_DATA_HALF)
                 CHECK_TECOBLAS(tecoblasGetWorkspaceSize(desc->handle, desc->transa, desc->transb, desc->m, desc->n, desc->k, desc->alpha, TECOBLAS_DATA_HALF,desc->lda, 1, TECOBLAS_DATA_HALF, desc->n, 1, desc->beta, TECOBLAS_DATA_HALF, desc->ldc, 1, desc->batch_count, TECOBLAS_HGEMM,reinterpret_cast<size_t*>(size)))
@@ -104,13 +103,9 @@ infiniopStatus_t tecoMatmul(MatmulTecoDescriptor_t desc, void *workspace, uint64
         }
     }else{
         if(desc->datatype == TECOBLAS_DATA_HALF){
-            toContiguous(desc->b_desc,const_cast<void*>(b),TECODNN_DATA_HALF);
-            CHECK_TECOBLAS(tecoblasHgemm(desc->handle, desc->transa, desc->transb, desc->m, desc->n, desc->k, desc->alpha, a, desc->lda, b, desc->n, desc->beta, c, desc->ldc))
-            restoreTensor(desc->b_desc,const_cast<void*>(b),TECODNN_DATA_HALF);
+            CHECK_TECOBLAS(tecoblasHgemm(desc->handle, desc->transa, TECOBLAS_OP_T, desc->m, desc->n, desc->k, desc->alpha, a, desc->lda, b, desc->k, desc->beta, c, desc->ldc))
         }else{
-            toContiguous(desc->b_desc,const_cast<void*>(b),TECODNN_DATA_FLOAT);
-            CHECK_TECOBLAS(tecoblasSgemm(desc->handle, desc->transa, desc->transb, desc->m, desc->n, desc->k, desc->alpha, a, desc->lda, b, desc->n, desc->beta, c, desc->ldc))
-            restoreTensor(desc->b_desc,const_cast<void*>(b),TECODNN_DATA_FLOAT);
+            CHECK_TECOBLAS(tecoblasSgemm(desc->handle, desc->transa, TECOBLAS_OP_T, desc->m, desc->n, desc->k, desc->alpha, a, desc->lda, b, desc->k, desc->beta, c, desc->ldc))
         }
 
     }
