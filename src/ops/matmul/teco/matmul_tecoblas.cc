@@ -1,19 +1,68 @@
 #include "matmul_tecoblas.h"
 
 infiniopStatus_t tecoCreateMatmulDescriptor(TecoHandle_t handle, MatmulTecoDescriptor_t *desc_ptr, infiniopTensorDescriptor_t c_desc, float alpha, infiniopTensorDescriptor_t a_desc, infiniopTensorDescriptor_t b_desc, float beta) {
-    long long int batch,batch_count;
     infiniopStatus_t status = STATUS_SUCCESS;
+    tecoblasDataType_t datatype;
+    tecoblasOperation_t transA,transB,transC;
+    uint64_t m,k,n;
+    long long int lda,ldb,ldc;
+    long long int batch,batch_count;
+    long int strideA = 1,strideB = 1,strideC = 1;
     if (a_desc->ndim == 2 && b_desc->ndim == 2) {
         batch = 0;
         batch_count = 1;
     }else if(a_desc->ndim == 3 && b_desc->ndim == 3){
         batch = 1;
         batch_count = a_desc->shape[0];
+        strideA = a_desc->strides[0];
+        strideB = b_desc->strides[0];
+        strideC = c_desc->strides[0];
     }else{
         return STATUS_BAD_TENSOR_SHAPE;
     }
-
-    tecoblasDataType_t datatype;
+    /*MatrixA*/
+    if(a_desc->strides[1+batch] == 1 && (uint64_t)a_desc->strides[0+batch] >= a_desc->shape[1+batch]){
+        transA = TECOBLAS_OP_N;
+        m = a_desc->shape[0+batch];
+        k = a_desc->shape[1+batch];
+        lda = a_desc->strides[0+batch];
+    }else if(a_desc->strides[0+batch] == 1 && (uint64_t)a_desc->strides[1+batch] >= a_desc->shape[0+batch]){
+        transA = TECOBLAS_OP_T;
+        m = a_desc->shape[0+batch];
+        k = a_desc->shape[1+batch];
+        lda = a_desc->strides[1+batch];
+    }else{
+        return STATUS_BAD_TENSOR_SHAPE; 
+    }
+    /*MatrixB*/
+    if(b_desc->strides[1+batch] == 1 && (uint64_t)b_desc->strides[0+batch] >= b_desc->shape[1+batch]){
+        transB = TECOBLAS_OP_N;
+        k = b_desc->shape[0+batch];
+        n = b_desc->shape[1+batch];
+        ldb = b_desc->strides[0+batch];
+    }else if(b_desc->strides[0+batch] == 1 && (uint64_t)b_desc->strides[1+batch] >= b_desc->shape[0+batch]){
+        transB = TECOBLAS_OP_T;
+        k = b_desc->shape[0+batch];
+        n = b_desc->shape[1+batch];
+        ldb = b_desc->strides[1+batch];
+    }else{
+        return STATUS_BAD_TENSOR_SHAPE; 
+    }
+    /*MatrixC*/
+    if(c_desc->strides[1+batch] == 1 && (uint64_t)c_desc->strides[0+batch] >= c_desc->shape[1+batch]){
+        transC = TECOBLAS_OP_N;
+        m = c_desc->shape[0+batch];
+        n = c_desc->shape[1+batch];
+        ldc = c_desc->strides[0+batch];
+    }else if(c_desc->strides[0+batch] == 1 && (uint64_t)c_desc->strides[1+batch] >= c_desc->shape[0+batch]){
+        transC = TECOBLAS_OP_T;
+        m = c_desc->shape[0+batch];
+        n = c_desc->shape[1+batch];
+        ldc = c_desc->strides[1+batch];
+    }else{
+        return STATUS_BAD_TENSOR_SHAPE; 
+    }
+    
     if(a_desc->dt==F16 && b_desc->dt==F16){
         datatype = TECOBLAS_DATA_HALF;
     }else if(a_desc->dt==F32 && b_desc->dt==F32){
@@ -24,7 +73,6 @@ infiniopStatus_t tecoCreateMatmulDescriptor(TecoHandle_t handle, MatmulTecoDescr
 
     tecoblasHandle_t tecoblas_handle;
     tecoblasCreate(&tecoblas_handle);
-    
 
     *desc_ptr = new MatmulTecoDescriptor{
         handle->device,
@@ -32,24 +80,22 @@ infiniopStatus_t tecoCreateMatmulDescriptor(TecoHandle_t handle, MatmulTecoDescr
         tecoblas_handle,
         handle->stream,
         datatype,
-        TECOBLAS_OP_N,
-        TECOBLAS_OP_N,
-        a_desc->shape[0+batch],
-        a_desc->shape[1+batch],
-        b_desc->shape[1+batch],
+        transA,
+        transB,
+        transC,
+        m,
+        k,
+        n,
         alpha,
         beta,
-        a_desc->strides[0+batch],
-        b_desc->strides[0+batch],
-        c_desc->strides[0+batch],
+        lda,
+        ldb,
+        ldc,
         batch,
         batch_count,
-        a_desc->strides[0],
-        b_desc->strides[0],
-        c_desc->strides[0],
-        MatrixInfo(a_desc,&status),
-        MatrixInfo(b_desc,&status),
-        MatrixInfo(c_desc,&status),
+        strideA,
+        strideB,
+        strideC,
         };
     tecoblasSetStream((*desc_ptr)->handle,(*desc_ptr)->stream);
         
@@ -57,31 +103,42 @@ infiniopStatus_t tecoCreateMatmulDescriptor(TecoHandle_t handle, MatmulTecoDescr
 }
 
 infiniopStatus_t tecoGetMatmulWorkspaceSize(MatmulTecoDescriptor_t desc, uint64_t *size) {
-    if(is_contiguous(desc->a_desc) && is_contiguous(desc->b_desc) && is_contiguous(desc->c_desc)){
-        if(desc->batch==0){
-            if(desc->datatype == TECOBLAS_DATA_HALF)
-                CHECK_TECOBLAS(tecoblasGetWorkspaceSize(desc->handle, desc->transa, desc->transb, desc->m, desc->n, desc->k, desc->alpha, TECOBLAS_DATA_HALF,desc->lda, 1, TECOBLAS_DATA_HALF, desc->ldb, 1, desc->beta, TECOBLAS_DATA_HALF, desc->ldc, 1, desc->batch_count, TECOBLAS_HGEMM,reinterpret_cast<size_t*>(size)))
-            else
-                CHECK_TECOBLAS(tecoblasGetWorkspaceSize(desc->handle, desc->transa, desc->transb, desc->m, desc->n, desc->k, desc->alpha, TECOBLAS_DATA_FLOAT,desc->lda, 1, TECOBLAS_DATA_FLOAT, desc->ldb, 1, desc->beta, TECOBLAS_DATA_FLOAT, desc->ldc, 1, desc->batch_count, TECOBLAS_SGEMM,reinterpret_cast<size_t*>(size)))
-        }else{
-            if(desc->datatype == TECOBLAS_DATA_HALF)
-                CHECK_TECOBLAS(tecoblasGetWorkspaceSize(desc->handle, desc->transa, desc->transb, desc->m, desc->n, desc->k, desc->alpha, TECOBLAS_DATA_HALF,desc->lda, desc->strideA, TECOBLAS_DATA_HALF, desc->ldb, desc->strideB, desc->beta, TECOBLAS_DATA_HALF, desc->ldc, desc->strideC, desc->batch_count, TECOBLAS_HGEMM_STRIDED_BATCHED,reinterpret_cast<size_t*>(size)))
-            else
-                CHECK_TECOBLAS(tecoblasGetWorkspaceSize(desc->handle, desc->transa, desc->transb, desc->m, desc->n, desc->k, desc->alpha, TECOBLAS_DATA_FLOAT,desc->lda, desc->strideA, TECOBLAS_DATA_FLOAT, desc->ldb, desc->strideB, desc->beta, TECOBLAS_DATA_FLOAT, desc->ldc, desc->strideC, desc->batch_count, TECOBLAS_SGEMM_STRIDED_BATCHED,reinterpret_cast<size_t*>(size)))
-        }
+    tecoblasAPIName_t apiName;
+    if (desc->batch == 0)
+    {
+        if(desc->datatype == TECOBLAS_DATA_HALF)
+            apiName = TECOBLAS_HGEMM;
+        else
+            apiName = TECOBLAS_SGEMM;
     }else{
-        if(desc->batch==0){
-            if(desc->datatype == TECOBLAS_DATA_HALF)
-                CHECK_TECOBLAS(tecoblasGetWorkspaceSize(desc->handle, desc->transa, desc->transb, desc->m, desc->n, desc->k, desc->alpha, TECOBLAS_DATA_HALF,desc->lda, 1, TECOBLAS_DATA_HALF, desc->n, 1, desc->beta, TECOBLAS_DATA_HALF, desc->ldc, 1, desc->batch_count, TECOBLAS_HGEMM,reinterpret_cast<size_t*>(size)))
-            else
-                CHECK_TECOBLAS(tecoblasGetWorkspaceSize(desc->handle, desc->transa, desc->transb, desc->m, desc->n, desc->k, desc->alpha, TECOBLAS_DATA_FLOAT,desc->lda, 1, TECOBLAS_DATA_FLOAT, desc->n, 1, desc->beta, TECOBLAS_DATA_FLOAT, desc->ldc, 1, desc->batch_count, TECOBLAS_SGEMM,reinterpret_cast<size_t*>(size)))
-        }else{
-            if(desc->datatype == TECOBLAS_DATA_HALF)
-                CHECK_TECOBLAS(tecoblasGetWorkspaceSize(desc->handle, desc->transa, desc->transb, desc->m, desc->n, desc->k, desc->alpha, TECOBLAS_DATA_HALF,desc->lda, desc->strideA, TECOBLAS_DATA_HALF, desc->n, desc->strideB, desc->beta, TECOBLAS_DATA_HALF, desc->ldc, desc->strideC, desc->batch_count, TECOBLAS_HGEMM_STRIDED_BATCHED,reinterpret_cast<size_t*>(size)))
-            else
-                CHECK_TECOBLAS(tecoblasGetWorkspaceSize(desc->handle, desc->transa, desc->transb, desc->m, desc->n, desc->k, desc->alpha, TECOBLAS_DATA_FLOAT,desc->lda, desc->strideA, TECOBLAS_DATA_FLOAT, desc->n, desc->strideB, desc->beta, TECOBLAS_DATA_FLOAT, desc->ldc, desc->strideC, desc->batch_count, TECOBLAS_SGEMM_STRIDED_BATCHED,reinterpret_cast<size_t*>(size)))
-        }
+        if(desc->datatype == TECOBLAS_DATA_HALF)
+            apiName = TECOBLAS_HGEMM_STRIDED_BATCHED;
+        else
+            apiName = TECOBLAS_SGEMM_STRIDED_BATCHED;
     }
+    CHECK_TECOBLAS(tecoblasGetWorkspaceSize(
+        desc->handle, 
+        desc->transa, 
+        desc->transb, 
+        desc->m, 
+        desc->n, 
+        desc->k, 
+        desc->alpha, 
+        desc->datatype,
+        desc->lda, 
+        desc->strideA, 
+        desc->datatype, 
+        desc->ldb, 
+        desc->strideB, 
+        desc->beta, 
+        desc->datatype, 
+        desc->ldc, 
+        desc->strideC, 
+        desc->batch_count, 
+        apiName,
+        reinterpret_cast<size_t*>(size)))
+    
+
         
     return STATUS_SUCCESS;
 }
@@ -89,25 +146,16 @@ infiniopStatus_t tecoGetMatmulWorkspaceSize(MatmulTecoDescriptor_t desc, uint64_
 infiniopStatus_t tecoMatmul(MatmulTecoDescriptor_t desc, void *workspace, uint64_t workspace_size, void *c, const void *a, const void *b, void *stream) {
     tecoblasSetStream(desc->handle, desc->stream);
     tecoblasSetWorkspace(desc->handle, workspace, workspace_size);
-    if(is_contiguous(desc->a_desc)  && is_contiguous(desc->b_desc) && is_contiguous(desc->c_desc)){
-        if(desc->batch==0){
-            if(desc->datatype == TECOBLAS_DATA_HALF)
-                CHECK_TECOBLAS(tecoblasHgemm(desc->handle, desc->transa, desc->transb, desc->m, desc->n, desc->k, desc->alpha, a, desc->lda, b, desc->ldb, desc->beta, c, desc->ldc))
-            else
-                CHECK_TECOBLAS(tecoblasSgemm(desc->handle, desc->transa, desc->transb, desc->m, desc->n, desc->k, desc->alpha, a, desc->lda, b, desc->ldb, desc->beta, c, desc->ldc))
-        }else{
-            if(desc->datatype == TECOBLAS_DATA_HALF)
-                CHECK_TECOBLAS(tecoblasHgemmStridedBatched(desc->handle, desc->transa, desc->transb, desc->m, desc->n, desc->k, desc->alpha, a, desc->lda,desc->strideA, b, desc->ldb,desc->strideB, desc->beta, c, desc->ldc,desc->strideC,desc->batch_count))
-            else
-                CHECK_TECOBLAS(tecoblasSgemmStridedBatched(desc->handle, desc->transa, desc->transb, desc->m, desc->n, desc->k, desc->alpha, a, desc->lda,desc->strideA, b, desc->ldb,desc->strideB, desc->beta, c, desc->ldc,desc->strideC,desc->batch_count))
-        }
+    if(desc->batch==0){
+        if(desc->datatype == TECOBLAS_DATA_HALF)
+            CHECK_TECOBLAS(tecoblasHgemm(desc->handle, desc->transa, desc->transb, desc->m, desc->n, desc->k, desc->alpha, a, desc->lda, b, desc->ldb, desc->beta, c, desc->ldc))
+        else
+            CHECK_TECOBLAS(tecoblasSgemm(desc->handle, desc->transa, desc->transb, desc->m, desc->n, desc->k, desc->alpha, a, desc->lda, b, desc->ldb, desc->beta, c, desc->ldc))
     }else{
-        if(desc->datatype == TECOBLAS_DATA_HALF){
-            CHECK_TECOBLAS(tecoblasHgemm(desc->handle, desc->transa, TECOBLAS_OP_T, desc->m, desc->n, desc->k, desc->alpha, a, desc->lda, b, desc->k, desc->beta, c, desc->ldc))
-        }else{
-            CHECK_TECOBLAS(tecoblasSgemm(desc->handle, desc->transa, TECOBLAS_OP_T, desc->m, desc->n, desc->k, desc->alpha, a, desc->lda, b, desc->k, desc->beta, c, desc->ldc))
-        }
-
+        if(desc->datatype == TECOBLAS_DATA_HALF)
+            CHECK_TECOBLAS(tecoblasHgemmStridedBatched(desc->handle, desc->transa, desc->transb, desc->m, desc->n, desc->k, desc->alpha, a, desc->lda,desc->strideA, b, desc->ldb,desc->strideB, desc->beta, c, desc->ldc,desc->strideC,desc->batch_count))
+        else
+            CHECK_TECOBLAS(tecoblasSgemmStridedBatched(desc->handle, desc->transa, desc->transb, desc->m, desc->n, desc->k, desc->alpha, a, desc->lda,desc->strideA, b, desc->ldb,desc->strideB, desc->beta, c, desc->ldc,desc->strideC,desc->batch_count))
     }
     sdaaStreamSynchronize(desc->stream);
     return STATUS_SUCCESS;

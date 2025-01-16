@@ -119,7 +119,7 @@ def test(
             None,
         )
     )
-    assert torch.allclose(c, ans, atol=0, rtol=1e-2)
+    assert torch.allclose(c, ans, atol=0, rtol=1e-3)
 
     if PROFILE:
         for i in range(NUM_PRERUN):
