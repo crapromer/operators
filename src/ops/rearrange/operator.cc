@@ -17,6 +17,9 @@
 #ifdef ENABLE_ASCEND_NPU
 #include "ascend/rearrange_aclnn.h"
 #endif
+#ifdef ENABLE_TECO_SDAA
+#include "teco/rearrange_tecodnn.h"
+#endif
 
 __C infiniopStatus_t infiniopCreateRearrangeDescriptor(
     infiniopHandle_t handle,
@@ -47,6 +50,13 @@ __C infiniopStatus_t infiniopCreateRearrangeDescriptor(
                                                   src);
         }
 #endif
+#ifdef ENABLE_TECO_SDAA
+        case DevTecoSDAA: 
+            return tecoCreateRearrangeDescriptor((TecoHandle_t) handle,
+                                                (RearrangeTecoDescriptor_t *) desc_ptr,
+                                                dst,
+                                                src);
+#endif
     }
     return STATUS_BAD_DEVICE;
 }
@@ -76,6 +86,14 @@ __C infiniopStatus_t infiniopRearrange(infiniopRearrangeDescriptor_t desc, void 
                                   stream);
         }
 #endif
+#ifdef ENABLE_TECO_SDAA
+        case DevTecoSDAA: {
+            return tecoRearrange((RearrangeTecoDescriptor_t) desc,
+                                  dst,
+                                  src,
+                                  stream);
+        }
+#endif
     }
     return STATUS_BAD_DEVICE;
 }
@@ -100,6 +118,11 @@ __C infiniopStatus_t infiniopDestroyRearrangeDescriptor(infiniopRearrangeDescrip
 #ifdef ENABLE_ASCEND_NPU
         case DevAscendNpu: {
             return aclnnDestroyRearrangeDescriptor((RearrangeAclnnDescriptor_t) desc);
+        }
+#endif
+#ifdef ENABLE_TECO_SDAA
+        case DevTecoSDAA: {
+            return tecoDestroyRearrangeDescriptor((RearrangeTecoDescriptor_t) desc);
         }
 #endif
     }

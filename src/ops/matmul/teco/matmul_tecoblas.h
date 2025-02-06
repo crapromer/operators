@@ -3,7 +3,6 @@
 #include "operators.h"
 #include <sdaa_runtime.h>
 #include <tecoblas.h>
-#include <tecodnn.h>
 #include "../../../devices/teco/teco_handle.h"
 struct MatmulTecoDescriptor {
     Device device;

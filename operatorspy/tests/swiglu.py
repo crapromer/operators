@@ -79,7 +79,6 @@ def test_out_of_place(
             descriptor, c_tensor.data, a_tensor.data, b_tensor.data, None
         )
     )
-
     assert torch.allclose(c, ans, atol=1e-4, rtol=1e-2)
     print("out-of-place Test passed!")
 
@@ -234,6 +233,19 @@ def test_ascend(lib, test_cases):
         test_in_place2(lib, handle, "npu", shape, a_stride, b_stride, dtype, torch.npu.synchronize)
 
     destroy_handle(lib, handle) 
+def test_teco(lib, test_cases):
+    import torch_sdaa
+    device = DeviceEnum.DEVICE_TECO
+    handle = create_handle(lib, device)
+
+    for shape, a_stride, b_stride, c_stride, dtype in test_cases:
+        test_out_of_place(
+            lib, handle, "sdaa", shape, a_stride, b_stride, c_stride, dtype
+        )
+        test_in_place1(lib, handle, "sdaa", shape, a_stride, b_stride, dtype)
+        test_in_place2(lib, handle, "sdaa", shape, a_stride, b_stride, dtype)
+
+    destroy_handle(lib, handle) 
 
 
 if __name__ == "__main__":
@@ -278,3 +290,5 @@ if __name__ == "__main__":
         test_bang(lib, test_cases)
     if args.ascend:
         test_ascend(lib, test_cases)
+    if args.teco:
+        test_teco(lib, test_cases)
