@@ -243,7 +243,7 @@ if has_config("teco") then
             local cc = "/opt/tecoai/bin/tecocc"
 
             local includedirs = table.concat(target:get("includedirs"), " ")
-            local args = {sourcefile, "-o", objectfile}
+            local args = {sourcefile, "-o", objectfile,"-O2", "-fPIC", "-Wall", "-Werror", "-std=c++17", "-pthread","-c"}
             
             for _, includedir in ipairs(target:get("includedirs")) do
                 table.insert(args, "-I" .. includedir)

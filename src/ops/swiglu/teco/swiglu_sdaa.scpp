@@ -1,0 +1,70 @@
+#include "swiglu_sdaa.h"
+__local__ halfv16 tempa, tempb, tempc;
+
+__device__ void silu_halfv16(halfv16 *c, halfv16 *a, halfv16 *b) {
+    floatv16 one_v = simd_stretch(1.0f);
+    floatv16 a_silu = simd_div(simd_cvt_h2f(*b), simd_add(one_v, simd_exp(0 - simd_cvt_h2f(*b))));
+    halfv16 out = simd_cvt_f2h(simd_mul(simd_cvt_h2f(*a), a_silu));
+    *c = out;
+}
+
+__device__ void silu_half(half *c, const half *a, const half *b) {
+    *c = (*b) * (*a)/ (1.0 + expf(0 - *b)) ;
+}
+
+__global__ void swiglu(half *c, half const *a, half const *b, size_t rows, size_t cols, size_t lda, size_t ldb, size_t ldc) {
+    int vector_size = 16;
+    for (size_t i = 0; i < rows / threadDim + 1; i++) {
+        if (threadIdx < rows - i * threadDim) {
+            size_t j = 0;
+            for (; j < cols / vector_size; j++) {
+                simd_load(tempa, a + (threadIdx + i * threadDim) * lda + j * vector_size);
+                simd_load(tempb, b + (threadIdx + i * threadDim) * ldb + j * vector_size);
+                silu_halfv16(&tempc, &tempa, &tempb);
+                simd_store(tempc, c + (threadIdx + i * threadDim) * ldc + j * vector_size);
+            }
+            for (size_t k = 0; k < cols - j * vector_size; k++)
+            {
+                silu_half(
+                c + (threadIdx + i * threadDim) * ldc + j * vector_size + k,
+                a + (threadIdx + i * threadDim) * lda + j * vector_size + k,
+                b + (threadIdx + i * threadDim) * ldb + j * vector_size + k);
+            }
+            
+        }
+    }
+}
+
+infiniopStatus_t tecoCreateSwiGLUDescriptor(TecoHandle_t handle,
+                                            SwiGLUTecoDescriptor_t *desc_ptr,
+                                            infiniopTensorDescriptor_t c_desc,
+                                            infiniopTensorDescriptor_t a_desc,
+                                            infiniopTensorDescriptor_t b_desc) {
+    *desc_ptr = new SwiGLUTecoDescriptor{
+        handle->device,
+        handle->device_id,
+        handle->stream,
+        a_desc->shape[0],
+        a_desc->shape[1],
+        a_desc->strides[0],
+        b_desc->strides[0],
+        c_desc->strides[0],
+    };
+    return STATUS_SUCCESS;
+}
+
+infiniopStatus_t tecoSwiGLU(SwiGLUTecoDescriptor_t desc,
+                            void *c,
+                            void const *a,
+                            void const *b,
+                            void *stream) {
+    auto a_ptr = reinterpret_cast<const half *>(a);
+    auto b_ptr = reinterpret_cast<const half *>(b);
+    auto c_ptr = reinterpret_cast<half *>(c);
+    swiglu<<<1>>>(c_ptr, a_ptr, b_ptr, desc->rows, desc->cols, desc->lda, desc->ldb, desc->ldc);
+    return STATUS_SUCCESS;
+}
+
+infiniopStatus_t tecoDestroySwiGLUDescriptor(SwiGLUTecoDescriptor_t desc) {
+    return STATUS_SUCCESS;
+}

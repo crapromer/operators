@@ -124,7 +124,6 @@ def test_in_place1(
             descriptor, a_tensor.data, a_tensor.data, b_tensor.data, None
         )
     )
-
     assert torch.allclose(a, ans, atol=1e-4, rtol=1e-2)
     print("in-place1 Test passed!")
 

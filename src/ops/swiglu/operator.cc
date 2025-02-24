@@ -15,7 +15,7 @@
 #include "ascend/swiglu.h"
 #endif
 #ifdef ENABLE_TECO_SDAA
-#include "teco/swiglu_tecodnn.h"
+#include "teco/swiglu_sdaa.h"
 #endif
 
 __C infiniopStatus_t infiniopCreateSwiGLUDescriptor(infiniopHandle_t handle,
